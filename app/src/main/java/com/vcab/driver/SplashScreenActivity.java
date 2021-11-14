@@ -4,8 +4,9 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.os.Handler;
-import android.widget.Toast;
+
+import com.google.firebase.auth.FirebaseAuth;
+import com.vcab.driver.authentication.UserAuthenticationActivity;
 
 import java.util.concurrent.TimeUnit;
 
@@ -25,7 +26,13 @@ public class SplashScreenActivity extends AppCompatActivity {
             @Override
             public void run() throws Throwable {
 
-                MessagesClass.showToastMsg("Finished!",SplashScreenActivity.this);
+                if (FirebaseAuth.getInstance().getCurrentUser() != null) {
+                    startActivity(new Intent(SplashScreenActivity.this, MainActivity.class));
+                    finish();
+                } else {
+                    startActivity(new Intent(SplashScreenActivity.this, UserAuthenticationActivity.class));
+                    finish();
+                }
 
             }
         });

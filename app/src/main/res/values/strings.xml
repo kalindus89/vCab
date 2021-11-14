@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">v Cab Driver</string>
+    <!--<string name="default_web_client_id" translatable="false">406892536868-9l6u3ntffr9fb2nm8ekf23d4b62b7odr.apps.googleusercontent.com</string>
+-->
 </resources>
