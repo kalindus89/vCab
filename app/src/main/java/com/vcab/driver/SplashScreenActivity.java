@@ -6,6 +6,7 @@ import android.content.Intent;
 import android.os.Bundle;
 
 import com.google.firebase.auth.FirebaseAuth;
+import com.vcab.driver.authentication.UserDetailsActivity;
 import com.vcab.driver.authentication.UserAuthenticationActivity;
 
 import java.util.concurrent.TimeUnit;
@@ -21,6 +22,7 @@ public class SplashScreenActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.splash_screen_activity);
 
+       //FirebaseAuth.getInstance().signOut();
 
         Completable.timer(3, TimeUnit.SECONDS, AndroidSchedulers.mainThread()).subscribe(new Action() {
             @Override
@@ -28,11 +30,10 @@ public class SplashScreenActivity extends AppCompatActivity {
 
                 if (FirebaseAuth.getInstance().getCurrentUser() != null) {
                     startActivity(new Intent(SplashScreenActivity.this, MainActivity.class));
-                    finish();
                 } else {
                     startActivity(new Intent(SplashScreenActivity.this, UserAuthenticationActivity.class));
-                    finish();
                 }
+                finish();
 
             }
         });

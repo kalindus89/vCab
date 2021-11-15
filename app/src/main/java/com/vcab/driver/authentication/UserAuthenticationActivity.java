@@ -2,22 +2,26 @@ package com.vcab.driver.authentication;
 
 import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
-import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.view.WindowManager;
+import android.view.View;
+import android.widget.ProgressBar;
 
 import com.firebase.ui.auth.AuthMethodPickerLayout;
 import com.firebase.ui.auth.AuthUI;
 import com.firebase.ui.auth.FirebaseAuthUIActivityResultContract;
 import com.firebase.ui.auth.IdpResponse;
 import com.firebase.ui.auth.data.model.FirebaseAuthUIAuthenticationResult;
-import com.google.firebase.FirebaseApp;
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.DocumentSnapshot;
+import com.google.firebase.firestore.FirebaseFirestore;
 import com.vcab.driver.MainActivity;
 import com.vcab.driver.MessagesClass;
 import com.vcab.driver.R;
@@ -27,7 +31,7 @@ import java.util.List;
 
 public class UserAuthenticationActivity extends AppCompatActivity {
 
-    private final static int LOGIN_REQUEST_CODE=7171; // any Number
+    private final static int LOGIN_REQUEST_CODE = 7171; // any Number
     private List<AuthUI.IdpConfig> provider;
     private FirebaseAuth firebaseAuth;
     private FirebaseAuth.AuthStateListener listener;
@@ -39,11 +43,12 @@ public class UserAuthenticationActivity extends AppCompatActivity {
 
         init();
     }
-    private void init(){
 
-        provider= Arrays.asList(
+    private void init() {
+
+        provider = Arrays.asList(
                 new AuthUI.IdpConfig.PhoneBuilder().build()
-                ,new AuthUI.IdpConfig.GoogleBuilder().build()
+                , new AuthUI.IdpConfig.GoogleBuilder().build()
         );
 
         firebaseAuth = FirebaseAuth.getInstance();
@@ -59,23 +64,46 @@ public class UserAuthenticationActivity extends AppCompatActivity {
         };*/
 
         //same as above (-> lamda expression)
-        listener = myFirebaseAuth->{
+        listener = myFirebaseAuth -> {
 
-            FirebaseUser user =myFirebaseAuth.getCurrentUser();
-            if (user !=null){
+            FirebaseUser user = myFirebaseAuth.getCurrentUser();
+            if (user != null) {
+                ProgressBar progress_bar = new ProgressBar(this, null, android.R.attr.progressBarStyleSmall);
 
-                startActivity(new Intent(UserAuthenticationActivity.this,MainActivity.class));
-                finish();
+                progress_bar.setVisibility(View.VISIBLE);
+                DocumentReference nycRef = FirebaseFirestore.getInstance().collection("users").document("drivers")
+                        .collection("userData").document(user.getUid());
 
-            }
-            else {
+                nycRef.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+                    @Override
+                    public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                        if (task.isSuccessful()) {
+                            DocumentSnapshot document = task.getResult();
+
+                            if (document.exists()) {
+                                startActivity(new Intent(UserAuthenticationActivity.this, MainActivity.class));
+                            } else {
+                                startActivity(new Intent(UserAuthenticationActivity.this, UserDetailsActivity.class));
+                            }
+
+                            progress_bar.setVisibility(View.GONE);
+                            finish();
+                        } else {
+                            progress_bar.setVisibility(View.GONE);
+                            MessagesClass.showToastMsg("Not ok big", UserAuthenticationActivity.this);
+                        }
+                    }
+                });
+
+            } else {
                 showLoginLayout();
             }
         };
 
     }
+
     private void showLoginLayout() {
-        AuthMethodPickerLayout authMethodPickerLayout= new AuthMethodPickerLayout.Builder(R.layout.activity_user_authentication)
+        AuthMethodPickerLayout authMethodPickerLayout = new AuthMethodPickerLayout.Builder(R.layout.activity_user_authentication)
                 .setPhoneButtonId(R.id.loginWithPhone)
                 .setGoogleButtonId(R.id.loginWithGoogle)
                 .build();
@@ -99,12 +127,12 @@ public class UserAuthenticationActivity extends AppCompatActivity {
 
                     IdpResponse response = result.getIdpResponse();
 
-                    if(result.getResultCode()==RESULT_OK){
+                    if (result.getResultCode() == RESULT_OK) {
 
                         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
 
-                    }else {
-                        MessagesClass.showToastMsg("Failed to sign in: "+response.getError().getMessage(),UserAuthenticationActivity.this);
+                    } else {
+                        MessagesClass.showToastMsg("Failed to sign in: " + response.getError().getMessage(), UserAuthenticationActivity.this);
                     }
 
 
@@ -120,7 +148,7 @@ public class UserAuthenticationActivity extends AppCompatActivity {
 
     @Override
     protected void onStop() {
-        if(firebaseAuth!=null && listener!=null) {
+        if (firebaseAuth != null && listener != null) {
             firebaseAuth.removeAuthStateListener(listener);
         }
         super.onStop();
