@@ -33,7 +33,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         setContentView(R.layout.activity_main);
 
         frameLayout = findViewById(R.id.frameLayout);
+
         drawerIcon = (ImageView) findViewById(R.id.drawerIcon);
+        drawerIcon.setOnClickListener(this);
 
 
         displayFragment(new HomeFragment());
@@ -60,7 +62,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         profile_layout = (LinearLayout) findViewById(R.id.profile_layout);
         support_layout = (LinearLayout) findViewById(R.id.support_layout);
 
-        drawerIcon.setOnClickListener(this);
         home_layout.setOnClickListener(this);
         trips_layout.setOnClickListener(this);
         profile_layout.setOnClickListener(this);
@@ -72,6 +73,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public void onClick(View view) {
         switch (view.getId()){
             case R.id.drawerIcon:
+                MessagesClass.showToastMsg("aaa",this);
                 drawerLayout.openDrawer(navigationView, true);
                 break;
             case R.id.home_layout:

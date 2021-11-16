@@ -28,9 +28,9 @@
 
         <FrameLayout
             android:id="@+id/frameLayout"
-            android:layout_marginTop="40dp"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:layout_marginTop="40dp"
             app:layout_constraintEnd_toEndOf="parent" />
 
     </RelativeLayout>
@@ -44,7 +44,7 @@
         android:alpha="0.7"
         android:background="#00000000"
         android:fitsSystemWindows="true"
-        android:visibility="gone">
+        android:visibility="invisible"> <!--make sure invisible not gone. if gone not work in first time click-->
 
         <include
             android:id="@+id/layout_side_menu"
