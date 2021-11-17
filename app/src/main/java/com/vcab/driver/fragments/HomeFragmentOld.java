@@ -52,7 +52,7 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
 
                 showMap();
             }
-        }, 1200);
+        }, 1500);
 
         return v;
     }

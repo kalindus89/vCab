@@ -2,10 +2,13 @@ package com.vcab.driver;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import androidx.core.content.ContextCompat;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
 
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Handler;
 import android.view.MenuItem;
@@ -24,9 +27,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     FrameLayout frameLayout;
     LinearLayout home_layout,trips_layout,profile_layout,support_layout;
-    ImageView drawerIcon;
     DrawerLayout drawerLayout;
     NavigationView navigationView;
+    Toolbar toolBar;
 
 
     @Override
@@ -36,14 +39,21 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         frameLayout = findViewById(R.id.frameLayout);
 
-        drawerIcon = (ImageView) findViewById(R.id.drawerIcon);
-        drawerIcon.setOnClickListener(this);
-
         drawerLayout = (DrawerLayout) findViewById(R.id.drawerLayout);
 
         navigationView = (NavigationView) findViewById(R.id.navigationView);
         //drawerLayout.openDrawer(GravityCompat.END);
+        toolBar = findViewById(R.id.toolBar);
+        setSupportActionBar(toolBar);
 
+        Drawable drawable = ContextCompat.getDrawable(getApplicationContext(), R.drawable.menu_icon);
+        toolBar.setNavigationIcon(drawable);
+        toolBar.setNavigationOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                drawerLayout.openDrawer(navigationView, true);
+            }
+        });
         onSetNavigationDrawerEvents();
 
         displayFragment(new HomeFragmentOld());
@@ -55,13 +65,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         drawerLayout.closeDrawer(navigationView, true);
 
-        getSupportFragmentManager()
-                .beginTransaction()
-                .replace(R.id.frameLayout, fragment, fragment.getClass().getSimpleName())
-                .addToBackStack(fragment.getClass().getSimpleName())
-                .commit();
-
-      /*  new Handler().postDelayed(new Runnable() {
+        new Handler().postDelayed(new Runnable() {
             @Override
             public void run() {
                 getSupportFragmentManager()
@@ -70,7 +74,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         .addToBackStack(fragment.getClass().getSimpleName())
                         .commit();
             }
-        }, 250);*/
+        }, 200);
 
     }
 
@@ -91,10 +95,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     @Override
     public void onClick(View view) {
-        switch (view.getId()){
+        switch (view.getId()){/*
             case R.id.drawerIcon:
                 drawerLayout.openDrawer(navigationView, true);
-                break;
+                break;*/
             case R.id.home_layout:
                 displayFragment(new HomeFragmentOld());
                 break;
