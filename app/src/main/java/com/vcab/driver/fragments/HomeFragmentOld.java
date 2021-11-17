@@ -1,13 +1,16 @@
 package com.vcab.driver.fragments;
 
+import android.app.Activity;
 import android.os.Bundle;
+import android.os.Handler;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentTransaction;
 
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -21,34 +24,43 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.vcab.driver.MessagesClass;
 import com.vcab.driver.R;
 
-public class HomeFragment extends Fragment implements OnMapReadyCallback {
+public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
 
-    MapFragment mapFragment;
+    SupportMapFragment mapFragment;
     GoogleMap googleMap;
 
-    public HomeFragment() {
+    public HomeFragmentOld() {
         // Required empty public constructor
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
-        // Inflate the layout for this fragment
-        View v= inflater.inflate(R.layout.fragment_home, container, false);
 
-        mapFragment = (MapFragment) getActivity().getFragmentManager().findFragmentById(R.id.google_map);
+        View v= inflater.inflate(R.layout.fragment_home_old, container, false);
 
-
-        getActivity().runOnUiThread(new Runnable() {
+        new Handler().postDelayed(new Runnable() {
             @Override
             public void run() {
+                if (mapFragment == null) {
+                    mapFragment = SupportMapFragment.newInstance();
+                    showMap();
+                }
+                FragmentTransaction transaction = getChildFragmentManager().beginTransaction();
+                // R.id.map is a layout
+                transaction.replace(R.id.google_map, mapFragment).commit();
+
                 showMap();
             }
-        });
-        return v;
+        }, 1200);
 
+        return v;
     }
 
+    @Override
+    public void onDetach() {
+        super.onDetach();
+    }
     private void showMap() {
 
         mapFragment.getMapAsync(this);
@@ -103,4 +115,7 @@ public class HomeFragment extends Fragment implements OnMapReadyCallback {
             }
         });
     }
+
+
+
 }

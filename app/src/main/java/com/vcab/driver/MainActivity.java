@@ -1,24 +1,26 @@
 package com.vcab.driver;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
 
-import android.content.Intent;
 import android.os.Bundle;
+import android.os.Handler;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.TextView;
 
 import com.google.android.material.navigation.NavigationView;
-import com.vcab.driver.fragments.HomeFragment;
+import com.vcab.driver.fragments.HomeFragmentOld;
 import com.vcab.driver.fragments.ProfileFragment;
 import com.vcab.driver.fragments.SupportFragment;
 import com.vcab.driver.fragments.TripsFragment;
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener {
+public class MainActivity extends AppCompatActivity implements View.OnClickListener{
 
     FrameLayout frameLayout;
     LinearLayout home_layout,trips_layout,profile_layout,support_layout;
@@ -37,25 +39,43 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         drawerIcon = (ImageView) findViewById(R.id.drawerIcon);
         drawerIcon.setOnClickListener(this);
 
+        drawerLayout = (DrawerLayout) findViewById(R.id.drawerLayout);
 
-        displayFragment(new HomeFragment());
+        navigationView = (NavigationView) findViewById(R.id.navigationView);
+        //drawerLayout.openDrawer(GravityCompat.END);
 
         onSetNavigationDrawerEvents();
+
+        displayFragment(new HomeFragmentOld());
+
 
     }
 
     private void displayFragment(Fragment fragment) {
+
+        drawerLayout.closeDrawer(navigationView, true);
+
         getSupportFragmentManager()
                 .beginTransaction()
-                .replace(frameLayout.getId(), fragment)
+                .replace(R.id.frameLayout, fragment, fragment.getClass().getSimpleName())
+                .addToBackStack(fragment.getClass().getSimpleName())
                 .commit();
+
+      /*  new Handler().postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                getSupportFragmentManager()
+                        .beginTransaction()
+                        .replace(R.id.frameLayout, fragment, fragment.getClass().getSimpleName())
+                        .addToBackStack(fragment.getClass().getSimpleName())
+                        .commit();
+            }
+        }, 250);*/
+
     }
 
     private void onSetNavigationDrawerEvents() {
-        drawerLayout = (DrawerLayout) findViewById(R.id.drawerLayout);
-        navigationView = (NavigationView) findViewById(R.id.navigationView);
 
-        //drawerLayout.openDrawer(GravityCompat.END);
 
         home_layout = (LinearLayout) findViewById(R.id.home_layout);
         trips_layout = (LinearLayout) findViewById(R.id.trips_layout);
@@ -73,26 +93,23 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public void onClick(View view) {
         switch (view.getId()){
             case R.id.drawerIcon:
-                MessagesClass.showToastMsg("aaa",this);
                 drawerLayout.openDrawer(navigationView, true);
                 break;
             case R.id.home_layout:
-                drawerLayout.closeDrawer(navigationView, true);
-                displayFragment(new HomeFragment());
+                displayFragment(new HomeFragmentOld());
                 break;
             case R.id.trips_layout:
-                drawerLayout.closeDrawer(navigationView, true);
                 displayFragment(new TripsFragment());
                 break;
             case R.id.profile_layout:
-                drawerLayout.closeDrawer(navigationView, true);
                 displayFragment(new ProfileFragment());
                 break;
             case R.id.support_layout:
-                drawerLayout.closeDrawer(navigationView, true);
                 displayFragment(new SupportFragment());
                 break;
 
         }
     }
+
+
 }

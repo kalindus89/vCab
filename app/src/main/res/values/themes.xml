@@ -36,7 +36,6 @@
         <item name="android:windowDisablePreview">true</item>
 
 
-
         <item name="colorButtonNormal">@color/teal_200</item>
         <item name="color">@color/teal_200</item>
 
@@ -56,6 +55,15 @@
 
 
     </style>
+
+    <style name="Theme.VCabDriver.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+    </style>
+
+    <style name="Theme.VCabDriver.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
+
+    <style name="Theme.VCabDriver.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
 
 
 </resources>
