@@ -54,8 +54,8 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_gravity="start"
-        android:alpha="0.7"
-        android:background="#00000000"
+        android:alpha="1"
+        android:background="#000000"
         android:fitsSystemWindows="true"
         android:visibility="invisible"> <!--make sure invisible not gone. if gone not work in first time click-->
 

@@ -5,11 +5,16 @@ public class User {
     private String name;
     private String phone;
     private String email;
+    private String profileImage;
 
-    public User(String name, String phone, String email) {
+    public User() {
+    }
+
+    public User(String name, String phone, String email, String profileImage) {
         this.name = name;
         this.phone = phone;
         this.email = email;
+        this.profileImage = profileImage;
     }
 
     public String getName() {
@@ -34,5 +39,13 @@ public class User {
 
     public void setEmail(String email) {
         this.email = email;
+    }
+
+    public String getProfileImage() {
+        return profileImage;
+    }
+
+    public void setProfileImage(String profileImage) {
+        this.profileImage = profileImage;
     }
 }

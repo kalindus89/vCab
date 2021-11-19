@@ -32,10 +32,18 @@ import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MapStyleOptions;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.gms.tasks.Task;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.firestore.GeoPoint;
 import com.vcab.driver.MessagesClass;
 import com.vcab.driver.R;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
 
@@ -48,11 +56,29 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
     LocationRequest locationRequest;
     LocationCallback locationCallBack;
 
+    public void stopLocationUpdates() {
+        if (fusedLocationProviderClient != null) {
+            fusedLocationProviderClient.removeLocationUpdates(locationCallBack);
+        }
+    }
+
     @Override
     public void onDestroy() {
-        fusedLocationProviderClient.removeLocationUpdates(locationCallBack);
+        stopLocationUpdates();
         super.onDestroy();
 
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        stopLocationUpdates();
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        stopLocationUpdates();
     }
 
     public HomeFragmentOld() {
@@ -120,9 +146,12 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
                         if (googleMap != null) {
                             //   markOnMap(locationResult.getLastLocation(),16,);
 
-                            MessagesClass.showToastMsg(locationResult.getLastLocation().toString(),getActivity());
+                            //MessagesClass.showToastMsg(locationResult.getLastLocation().toString(), getActivity());
+
                             LatLng latLng = new LatLng(locationResult.getLastLocation().getLatitude(), locationResult.getLastLocation().getLongitude());
                             googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 16));
+
+                            saveDataInFirestore(locationResult);
                         }
 
 
@@ -143,8 +172,37 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
         fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallBack, Looper.myLooper());
 
 
-
     }
+
+    private void saveDataInFirestore(LocationResult locationResult) {
+
+
+        try {
+            if (FirebaseAuth.getInstance().getUid() != null) { // when user close the app, uId() gets null. if its null we stop this service
+
+                Map<String, Object> userLocation = new HashMap<>();
+                userLocation.put("geo_point", (new GeoPoint(locationResult.getLastLocation().getLatitude(), locationResult.getLastLocation().getLongitude())));
+
+                FirebaseFirestore.getInstance().collection("users/drivers/userData/"+FirebaseAuth.getInstance().getUid()+"/lastKnowLocation").document(FirebaseAuth.getInstance().getUid()).update(userLocation).
+                        addOnCompleteListener(new OnCompleteListener<Void>() {
+                            @Override
+                            public void onComplete(@NonNull Task<Void> task) {
+
+                               // MessagesClass.showToastMsg("Succes",getContext());
+
+                            }
+                        }).addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception e) {
+                        MessagesClass.showToastMsg("not suuc.. "+e.getMessage(),getContext());
+
+                    }
+                });
+            }
+        } catch (NullPointerException e) { // when user close the app, uId() gets null. if its null we stop this service
+        }
+    }
+
 
     @Override
     public void onMapReady(@NonNull GoogleMap googleMap) {
