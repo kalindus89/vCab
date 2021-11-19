@@ -71,7 +71,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 getSupportFragmentManager()
                         .beginTransaction()
                         .replace(R.id.frameLayout, fragment, fragment.getClass().getSimpleName())
-                        .addToBackStack(fragment.getClass().getSimpleName())
+                        .addToBackStack("HomeFragmentOld")
                         .commit();
             }
         }, 200);
