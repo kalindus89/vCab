@@ -194,7 +194,7 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
                         }).addOnFailureListener(new OnFailureListener() {
                     @Override
                     public void onFailure(@NonNull Exception e) {
-                        MessagesClass.showToastMsg("not suuc.. "+e.getMessage(),getContext());
+                        MessagesClass.showToastMsg(""+e.getMessage(),getContext());
 
                     }
                 });

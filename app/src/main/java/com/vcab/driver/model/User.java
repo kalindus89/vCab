@@ -6,15 +6,17 @@ public class User {
     private String phone;
     private String email;
     private String profileImage;
+    private String firebaseToken;
 
     public User() {
     }
 
-    public User(String name, String phone, String email, String profileImage) {
+    public User(String name, String phone, String email, String profileImage, String firebaseToken) {
         this.name = name;
         this.phone = phone;
         this.email = email;
         this.profileImage = profileImage;
+        this.firebaseToken = firebaseToken;
     }
 
     public String getName() {
@@ -47,5 +49,13 @@ public class User {
 
     public void setProfileImage(String profileImage) {
         this.profileImage = profileImage;
+    }
+
+    public String getFirebaseToken() {
+        return firebaseToken;
+    }
+
+    public void setFirebaseToken(String firebaseToken) {
+        this.firebaseToken = firebaseToken;
     }
 }

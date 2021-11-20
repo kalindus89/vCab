@@ -32,6 +32,7 @@ import com.google.firebase.storage.UploadTask;
 import com.vcab.driver.MainActivity;
 import com.vcab.driver.MessagesClass;
 import com.vcab.driver.R;
+import com.vcab.driver.SessionManagement;
 import com.vcab.driver.SplashScreenActivity;
 import com.vcab.driver.model.User;
 
@@ -163,7 +164,7 @@ public class UserDetailsActivity extends AppCompatActivity {
 
     private void sendDataToCloudFirestore() {
 
-        User user = new User(fName.getText().toString(),phone_number.getText().toString(),email.getText().toString(),imageUriAccessToken);
+        User user = new User(fName.getText().toString(),phone_number.getText().toString(),email.getText().toString(),imageUriAccessToken,"update later");
 
         Map<String, Object> userLocation = new HashMap<>();
         userLocation.put("geo_point", (new GeoPoint(0.0,0.0)));
@@ -179,6 +180,8 @@ public class UserDetailsActivity extends AppCompatActivity {
 
                         progress_bar.setVisibility(View.INVISIBLE);
                         newAccount.setEnabled(true);
+
+                        new SessionManagement().setFBToken(getApplicationContext(), "update later");
 
                         startActivity(new Intent(UserDetailsActivity.this, MainActivity.class));
                         finish();

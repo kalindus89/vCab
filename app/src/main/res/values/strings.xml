@@ -1,6 +1,7 @@
 <resources>
     <string name="app_name">v Cab Driver</string>
     <string name="google_map_api_key">AIzaSyD0wRAc627leabR043mvmSq-uwK6U8o1Ig</string>
+    <string name="d_channel_id">channel_1</string>
 
     <!--<string name="default_web_client_id" translatable="false">406892536868-9l6u3ntffr9fb2nm8ekf23d4b62b7odr.apps.googleusercontent.com</string>
 -->

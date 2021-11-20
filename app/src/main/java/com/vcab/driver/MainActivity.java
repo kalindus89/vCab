@@ -18,6 +18,7 @@ import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
@@ -26,12 +27,16 @@ import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.google.firebase.messaging.FirebaseMessaging;
 import com.squareup.picasso.Picasso;
 import com.vcab.driver.fragments.HomeFragmentOld;
 import com.vcab.driver.fragments.ProfileFragment;
 import com.vcab.driver.fragments.SupportFragment;
 import com.vcab.driver.fragments.TripsFragment;
 import com.vcab.driver.model.User;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class MainActivity extends AppCompatActivity implements View.OnClickListener{
 
@@ -70,6 +75,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         displayFragment(new HomeFragmentOld());
 
+        updateFirebaseToken();
+
         getDriverInformation();
 
 
@@ -90,7 +97,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
                         userName.setText(user.getName());
                         phoneNumber.setText(user.getPhone());
-                        Picasso.get().load(user.getProfileImage()).placeholder(R.drawable.add_profile_icon).into(profile_pic);
+                        Picasso.get().load(user.getProfileImage()).placeholder(R.drawable.add_user_two).into(profile_pic);
 
                     }
                 }
@@ -111,9 +118,56 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         .addToBackStack("HomeFragmentOld")
                         .commit();
             }
-        }, 200);
+        }, 300);
 
     }
+
+    public void updateFirebaseToken() {
+
+        FirebaseMessaging.getInstance().getToken()
+                .addOnCompleteListener(new OnCompleteListener<String>() {
+                    @Override
+                    public void onComplete(@NonNull Task<String> task) {
+                        if (!task.isSuccessful()) {
+                            Toast.makeText(getApplicationContext(), "token receive failed", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+
+
+
+                        String refreshToken = task.getResult();
+
+                        if (!refreshToken.equals(new SessionManagement().getFBToken(getApplicationContext()))) {
+
+                            String fireStorePath="users/drivers/userData/"+FirebaseAuth.getInstance().getUid();
+
+                            DocumentReference nycRef = FirebaseFirestore.getInstance().document(fireStorePath);
+                            nycRef.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+                                @Override
+                                public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+
+                                    DocumentSnapshot document = task.getResult();
+                                    if (document.exists()) {
+                                        Map<String, Object> note = new HashMap<>();
+                                        note.put("firebaseToken", refreshToken);
+
+                                        nycRef.update(note).addOnCompleteListener(new OnCompleteListener<Void>() {
+                                            @Override
+                                            public void onComplete(@NonNull Task<Void> task) {
+                                                new SessionManagement().setFBToken(getApplicationContext(), refreshToken);
+                                            }
+                                        });
+
+                                    }
+
+                                }
+                            });
+
+                        }
+                    }
+                });
+    }
+
 
     private void onSetNavigationDrawerEvents() {
 
@@ -161,6 +215,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
         }
     }
+
 
 
 }
