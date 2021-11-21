@@ -183,7 +183,7 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
                 Map<String, Object> userLocation = new HashMap<>();
                 userLocation.put("geo_point", (new GeoPoint(locationResult.getLastLocation().getLatitude(), locationResult.getLastLocation().getLongitude())));
 
-                FirebaseFirestore.getInstance().collection("users/drivers/userData/"+FirebaseAuth.getInstance().getUid()+"/lastKnowLocation").document(FirebaseAuth.getInstance().getUid()).update(userLocation).
+                FirebaseFirestore.getInstance().document("driverLastLocation/"+FirebaseAuth.getInstance().getUid()).update(userLocation).
                         addOnCompleteListener(new OnCompleteListener<Void>() {
                             @Override
                             public void onComplete(@NonNull Task<Void> task) {

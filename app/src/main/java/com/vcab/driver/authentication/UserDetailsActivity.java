@@ -39,6 +39,7 @@ import com.vcab.driver.model.User;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -168,12 +169,15 @@ public class UserDetailsActivity extends AppCompatActivity {
 
         Map<String, Object> userLocation = new HashMap<>();
         userLocation.put("geo_point", (new GeoPoint(0.0,0.0)));
+        userLocation.put("city", "city");
+        userLocation.put("time_date", new Date());
 
         String fireStorePath="users/drivers/userData/"+FirebaseAuth.getInstance().getUid();
+        String fireStorePathToLastLocation="driverLastLocation/"+FirebaseAuth.getInstance().getUid();
 
-        FirebaseFirestore.getInstance().document(fireStorePath).collection("lastKnowLocation").document(FirebaseAuth.getInstance().getUid()).set(userLocation);
+        FirebaseFirestore.getInstance().document(fireStorePath).set(user);
 
-        FirebaseFirestore.getInstance().document(fireStorePath).set(user)
+        FirebaseFirestore.getInstance().document(fireStorePathToLastLocation).set(userLocation)
                 .addOnCompleteListener(new OnCompleteListener<Void>() {
                     @Override
                     public void onComplete(@NonNull Task<Void> task) {
