@@ -42,6 +42,43 @@
           ]
         }
       }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:406892536868:android:b4b67a7b6831452ce664b1",
+        "android_client_info": {
+          "package_name": "com.vcab.vcabcustomer"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "406892536868-vpo5u921748mlu09ql80o7h5n8vv29kg.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.vcab.vcabcustomer",
+            "certificate_hash": "59477c5328ab8554ad8d11b0fed93e5e3f17e746"
+          }
+        },
+        {
+          "client_id": "406892536868-9l6u3ntffr9fb2nm8ekf23d4b62b7odr.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD0wRAc627leabR043mvmSq-uwK6U8o1Ig"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "406892536868-9l6u3ntffr9fb2nm8ekf23d4b62b7odr.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
     }
   ],
   "configuration_version": "1"
