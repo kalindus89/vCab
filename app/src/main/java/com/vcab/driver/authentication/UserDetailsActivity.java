@@ -114,7 +114,7 @@ public class UserDetailsActivity extends AppCompatActivity {
 
     private void sendImageToStorage() {
 
-        StorageReference storageReference = FirebaseStorage.getInstance().getReference().child("Images").child("Profile Pic").child(FirebaseAuth.getInstance().getUid());
+        StorageReference storageReference = FirebaseStorage.getInstance().getReference().child("Images").child("Profile Pic").child("Drivers").child(FirebaseAuth.getInstance().getUid());
 
         //Image compresesion
         Bitmap bitmap = null;

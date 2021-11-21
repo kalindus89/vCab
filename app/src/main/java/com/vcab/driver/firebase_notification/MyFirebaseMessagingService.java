@@ -69,7 +69,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         // Since android Oreo notification channel is needed.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(channelId, "Channel human readable title", NotificationManager.IMPORTANCE_HIGH);
-            channel.setDescription("vCab Service");
+            channel.setDescription("vCab Driver Service");
             channel.enableLights(true);
             channel.setLightColor(Color.RED);
             channel.enableVibration(true);
