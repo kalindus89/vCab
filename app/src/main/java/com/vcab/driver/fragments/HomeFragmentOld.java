@@ -3,6 +3,8 @@ package com.vcab.driver.fragments;
 import android.Manifest;
 import android.app.Activity;
 import android.content.pm.PackageManager;
+import android.location.Address;
+import android.location.Geocoder;
 import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
@@ -18,6 +20,8 @@ import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
 
+import com.firebase.geofire.GeoFire;
+import com.firebase.geofire.GeoLocation;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
@@ -37,12 +41,20 @@ import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.GeoPoint;
 import com.vcab.driver.MessagesClass;
 import com.vcab.driver.R;
 
+import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
@@ -56,29 +68,30 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
     LocationRequest locationRequest;
     LocationCallback locationCallBack;
 
+    DatabaseReference onlineRef, currentUserRef, driversLocationRef;
+    GeoFire geoFire;
+
+
+    ValueEventListener onlineValueEventListener = new ValueEventListener() {
+        @Override
+        public void onDataChange(@NonNull DataSnapshot snapshot) {
+
+            if (snapshot.exists()) {
+                currentUserRef.onDisconnect().removeValue(); // delete data when app close . only data added initially
+            }
+        }
+
+        @Override
+        public void onCancelled(@NonNull DatabaseError error) {
+
+        }
+    };
+
+
     public void stopLocationUpdates() {
         if (fusedLocationProviderClient != null) {
             fusedLocationProviderClient.removeLocationUpdates(locationCallBack);
         }
-    }
-
-    @Override
-    public void onDestroy() {
-        stopLocationUpdates();
-        super.onDestroy();
-
-    }
-
-    @Override
-    public void onPause() {
-        super.onPause();
-        stopLocationUpdates();
-    }
-
-    @Override
-    public void onStop() {
-        super.onStop();
-        stopLocationUpdates();
     }
 
     public HomeFragmentOld() {
@@ -90,6 +103,11 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
                              Bundle savedInstanceState) {
 
         View v = inflater.inflate(R.layout.fragment_home_old, container, false);
+
+
+        onlineRef = FirebaseDatabase.getInstance().getReference(".info/connected"); //it is useful for your app to know when it is online or offline. which is updated every time the Firebase Realtime Database client's connection state changes
+
+        registerOnlineSystem();
 
         new Handler().postDelayed(new Runnable() {
             @Override
@@ -111,6 +129,40 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
     }
 
     @Override
+    public void onResume() {
+        super.onResume();
+        registerOnlineSystem();
+    }
+
+    private void registerOnlineSystem() {
+
+        onlineRef.addValueEventListener(onlineValueEventListener);
+
+    }
+
+    @Override
+    public void onDestroy() {
+        stopLocationUpdates();
+        geoFire.removeLocation(FirebaseAuth.getInstance().getCurrentUser().getUid());
+        onlineRef.removeEventListener(onlineValueEventListener);
+        super.onDestroy();
+
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        stopLocationUpdates();
+    }
+
+    @Override
+    public void onStop() {
+        super.onStop();
+        stopLocationUpdates();
+    }
+
+
+    @Override
     public void onDetach() {
         super.onDetach();
     }
@@ -122,6 +174,51 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
     }
 
     private void getLastKnowLocations() {
+
+        if (ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+
+        fusedLocationProviderClient.getLastLocation().addOnFailureListener(new OnFailureListener() {
+            @Override
+            public void onFailure(@NonNull Exception e) {
+
+                MessagesClass.showToastMsg(e.getMessage(),getContext());
+
+            }
+        }).addOnSuccessListener(new OnSuccessListener<Location>() {
+            @Override
+            public void onSuccess(Location location) {
+
+                if (googleMap != null) {
+                    //   markOnMap(locationResult.getLastLocation(),16,);
+                    LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
+                    googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 16));
+
+                    Geocoder geocoder = new Geocoder(getContext(), Locale.getDefault());
+
+                    List<Address> addressList;
+
+                    try{
+                        addressList = geocoder.getFromLocation(location.getLatitude(),location.getLongitude(),1);
+                        String cityName=addressList.get(0).getLocality();
+                        driversLocationRef = FirebaseDatabase.getInstance().getReference("DriversLocation").child(cityName); //DriversLocation path
+                        currentUserRef =driversLocationRef.child(FirebaseAuth.getInstance().getCurrentUser().getUid());//path inside DriversLocation
+
+                        geoFire = new GeoFire(driversLocationRef);
+
+                    }catch (IOException e){
+                        MessagesClass.showToastMsg(e.getMessage(),getActivity());
+                    }
+
+                    //  saveDataInFirestore(locationResult);
+                }
+
+            }
+        });
+
+        registerOnlineSystem();
+
 
         locationRequest = LocationRequest.create();
         locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
@@ -146,12 +243,14 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
                         if (googleMap != null) {
                             //   markOnMap(locationResult.getLastLocation(),16,);
 
-                            //MessagesClass.showToastMsg(locationResult.getLastLocation().toString(), getActivity());
+                            try{
+                                saveDataInFirebaseDatabase(locationResult);
 
-                            LatLng latLng = new LatLng(locationResult.getLastLocation().getLatitude(), locationResult.getLastLocation().getLongitude());
-                            googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 16));
+                            }catch (Exception e){
+                                MessagesClass.showToastMsg(e.getMessage(),getActivity());
+                            }
 
-                            saveDataInFirestore(locationResult);
+                          //  saveDataInFirestore(locationResult);
                         }
 
 
@@ -170,6 +269,29 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
             return;
         }
         fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallBack, Looper.myLooper());
+
+
+    }
+
+    private void saveDataInFirebaseDatabase(LocationResult locationResult) {
+
+
+
+        geoFire.setLocation(FirebaseAuth.getInstance().getCurrentUser().getUid(), // add current driver location to firebase database
+                new GeoLocation(locationResult.getLastLocation().getLatitude(), locationResult.getLastLocation().getLongitude()), new GeoFire.CompletionListener() {
+                    @Override
+                    public void onComplete(String key, DatabaseError error) {
+
+                        if (error!=null){
+                            MessagesClass.showToastMsg(error.getMessage(),getActivity());
+                        }else {
+                            MessagesClass.showToastMsg("You are online",getActivity());
+                        }
+
+                    }
+                });
+
+
 
 
     }
@@ -235,7 +357,7 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
                     != PackageManager.PERMISSION_GRANTED) {
 
             }
-            fusedLocationProviderClient.getLastLocation()
+           /* fusedLocationProviderClient.getLastLocation()
 
                     .addOnFailureListener(e ->
                             MessagesClass.showToastMsg(e.getMessage(), getActivity()))
@@ -243,7 +365,7 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
                     .addOnSuccessListener(location -> {
                         LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
                         googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 16));
-                    });
+                    });*/
             return true;
         });
 
