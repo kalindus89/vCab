@@ -76,8 +76,9 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
         @Override
         public void onDataChange(@NonNull DataSnapshot snapshot) {
 
-            if (snapshot.exists()) {
-                currentUserRef.onDisconnect().removeValue(); // delete data when app close . only data added initially
+            if (snapshot.exists() && currentUserRef!=null) {
+                System.out.println("aaaaaaa ");
+             //   currentUserRef.onDisconnect().removeValue(); // delete data when app close . only data added initially
             }
         }
 
@@ -121,7 +122,7 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
                 transaction.replace(R.id.google_map, mapFragment).commit();
 
                 showMap();
-                getLastKnowLocations();
+                updateLastKnowLocations();
             }
         }, 1500);
 
@@ -173,11 +174,13 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
 
     }
 
-    private void getLastKnowLocations() {
+    private void updateLastKnowLocations() {
 
         if (ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             return;
         }
+
+        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(getActivity());
 
         fusedLocationProviderClient.getLastLocation().addOnFailureListener(new OnFailureListener() {
             @Override
@@ -202,10 +205,13 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
                     try{
                         addressList = geocoder.getFromLocation(location.getLatitude(),location.getLongitude(),1);
                         String cityName=addressList.get(0).getLocality();
+
                         driversLocationRef = FirebaseDatabase.getInstance().getReference("DriversLocation").child(cityName); //DriversLocation path
                         currentUserRef =driversLocationRef.child(FirebaseAuth.getInstance().getCurrentUser().getUid());//path inside DriversLocation
 
                         geoFire = new GeoFire(driversLocationRef);
+
+                        saveDataInFirebaseDatabase();
 
                     }catch (IOException e){
                         MessagesClass.showToastMsg(e.getMessage(),getActivity());
@@ -219,6 +225,13 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
 
         registerOnlineSystem();
 
+
+
+
+
+    }
+
+    private void saveDataInFirebaseDatabase() {
 
         locationRequest = LocationRequest.create();
         locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
@@ -237,20 +250,31 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
                 getActivity().runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        //Log.d("aaaaaaa1",locationResult.getLastLocation().getLatitude() + " Longitude: " + locationResult.getLastLocation().getLongitude());
-                        //  System.out.println("aaaaaaaa2 " + "Latitude: " + locationResult.getLastLocation().getLatitude() + " Longitude: " + locationResult.getLastLocation().getLongitude());
 
                         if (googleMap != null) {
                             //   markOnMap(locationResult.getLastLocation(),16,);
 
                             try{
-                                saveDataInFirebaseDatabase(locationResult);
+
+                                geoFire.setLocation(FirebaseAuth.getInstance().getCurrentUser().getUid(), // add current driver location to firebase database. path same as currentUserRef. otherwise data not delete when app close
+                                        new GeoLocation(locationResult.getLastLocation().getLatitude(), locationResult.getLastLocation().getLongitude()), new GeoFire.CompletionListener() {
+                                            @Override
+                                            public void onComplete(String key, DatabaseError error) {
+
+                                                if (error!=null){
+                                                    MessagesClass.showToastMsg(error.getMessage(),getActivity());
+                                                }else {
+                                                    MessagesClass.showToastMsg("You are online",getActivity());
+                                                }
+
+                                            }
+                                        });
 
                             }catch (Exception e){
                                 MessagesClass.showToastMsg(e.getMessage(),getActivity());
                             }
 
-                          //  saveDataInFirestore(locationResult);
+                            //  saveDataInFirestore(locationResult);
                         }
 
 
@@ -260,7 +284,6 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
             }
         };
 
-        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(getActivity());
 
         if (ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.ACCESS_COARSE_LOCATION)
@@ -271,25 +294,6 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
         fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallBack, Looper.myLooper());
 
 
-    }
-
-    private void saveDataInFirebaseDatabase(LocationResult locationResult) {
-
-
-
-        geoFire.setLocation(FirebaseAuth.getInstance().getCurrentUser().getUid(), // add current driver location to firebase database
-                new GeoLocation(locationResult.getLastLocation().getLatitude(), locationResult.getLastLocation().getLongitude()), new GeoFire.CompletionListener() {
-                    @Override
-                    public void onComplete(String key, DatabaseError error) {
-
-                        if (error!=null){
-                            MessagesClass.showToastMsg(error.getMessage(),getActivity());
-                        }else {
-                            MessagesClass.showToastMsg("You are online",getActivity());
-                        }
-
-                    }
-                });
 
 
 
