@@ -77,8 +77,8 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
         public void onDataChange(@NonNull DataSnapshot snapshot) {
 
             if (snapshot.exists() && currentUserRef!=null) {
-                System.out.println("aaaaaaa ");
-             //   currentUserRef.onDisconnect().removeValue(); // delete data when app close . only data added initially
+             //   System.out.println("aaaaaaa ");
+                currentUserRef.onDisconnect().removeValue(); // delete data when app close . only data added initially
             }
         }
 
