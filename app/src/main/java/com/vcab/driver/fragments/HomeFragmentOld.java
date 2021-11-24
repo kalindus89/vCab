@@ -206,6 +206,7 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
                         addressList = geocoder.getFromLocation(location.getLatitude(),location.getLongitude(),1);
                         String cityName=addressList.get(0).getLocality();
 
+                        //Query
                         driversLocationRef = FirebaseDatabase.getInstance().getReference("DriversLocation").child(cityName); //DriversLocation path
                         currentUserRef =driversLocationRef.child(FirebaseAuth.getInstance().getCurrentUser().getUid());//path inside DriversLocation
 
