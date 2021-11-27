@@ -78,7 +78,7 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
 
             if (snapshot.exists() && currentUserRef!=null) {
              //   System.out.println("aaaaaaa ");
-                currentUserRef.onDisconnect().removeValue(); // delete data when app close . only data added initially
+            //    currentUserRef.onDisconnect().removeValue(); // delete data when app close . only data added initially
             }
         }
 
@@ -206,6 +206,15 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
                         addressList = geocoder.getFromLocation(location.getLatitude(),location.getLongitude(),1);
                         String cityName=addressList.get(0).getLocality();
 
+                      //  addressList.get(0).getLocality() city name
+                        //addressList.get(0).getSubLocality()
+                       // addressList.get(0).getAddressLine(0) address eg Kidelpitiya - Gorokgoda - Kahawala Rd, Sri Lanka
+                        //addressList.get(0).getAdminArea() Western Province
+                        //addressList.get(0).getSubAdminArea()  Kalutara
+
+                        if(cityName ==null){
+                            cityName=addressList.get(0).getAddressLine(0);
+                        }
                         //Query
                         driversLocationRef = FirebaseDatabase.getInstance().getReference("DriversLocation").child(cityName); //DriversLocation path
                         currentUserRef =driversLocationRef.child(FirebaseAuth.getInstance().getCurrentUser().getUid());//path inside DriversLocation
@@ -236,9 +245,9 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
 
         locationRequest = LocationRequest.create();
         locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-        locationRequest.setInterval(3000); // location update time
-        locationRequest.setFastestInterval(3000); // location update from the other apps in phone
-        locationRequest.setSmallestDisplacement(10f); // Set the minimum displacement between location updates in meters
+        locationRequest.setInterval(15000); // location update time
+        locationRequest.setFastestInterval(10000); // location update from the other apps in phone
+        locationRequest.setSmallestDisplacement(50f); // Set the minimum displacement between location updates in meters
 
         locationCallBack = new LocationCallback() {
             @Override
