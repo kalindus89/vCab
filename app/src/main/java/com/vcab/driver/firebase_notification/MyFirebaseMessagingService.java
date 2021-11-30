@@ -21,7 +21,7 @@ import com.vcab.driver.R;
 
 public class MyFirebaseMessagingService extends FirebaseMessagingService {
 
-    String title,message;
+    String title,body;
 
     @Override
     public void onNewToken(@NonNull String s) {
@@ -32,12 +32,12 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
     public void onMessageReceived(@NonNull RemoteMessage remoteMessage) {
         super.onMessageReceived(remoteMessage);
 
-        /*title = remoteMessage.getData().get("title");
-        message = remoteMessage.getData().get("message");*/
+        title = remoteMessage.getData().get("title");
+        body = remoteMessage.getData().get("body");
 
         // any key send by server
-        title = remoteMessage.getNotification().getTitle();
-        message = remoteMessage.getNotification().getBody();
+       /* title = remoteMessage.getNotification().getTitle();
+        message = remoteMessage.getNotification().getBody();*/
 
         showNotification();
     }
@@ -56,7 +56,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
                         .setLargeIcon(BitmapFactory.decodeResource(getResources(), R.drawable.add_user_two))
                         .setColor(Color.parseColor("#000000"))
                         .setContentTitle(title)
-                        .setContentText(message)
+                        .setContentText(body)
                         .setAutoCancel(true)
                         .setPriority(NotificationCompat.PRIORITY_MAX)
                         .setCategory(NotificationCompat.CATEGORY_MESSAGE)
