@@ -30,15 +30,13 @@ import com.google.firebase.storage.FirebaseStorage;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
 import com.vcab.driver.MainActivity;
-import com.vcab.driver.MessagesClass;
+import com.vcab.driver.Messages_Common_Class;
 import com.vcab.driver.R;
 import com.vcab.driver.SessionManagement;
-import com.vcab.driver.SplashScreenActivity;
 import com.vcab.driver.model.User;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -97,7 +95,7 @@ public class UserDetailsActivity extends AppCompatActivity {
             public void onClick(View view) {
 
                 if (fName.getText().toString().isEmpty() || phone_number.getText().toString().isEmpty() || phone_number.getText().toString().isEmpty()) {
-                    MessagesClass.showToastMsg("Enter all fields",UserDetailsActivity.this);
+                    Messages_Common_Class.showToastMsg("Enter all fields",UserDetailsActivity.this);
                 }else if (imagePath == null) {
                     Toast.makeText(getApplicationContext(), "Image is Empty", Toast.LENGTH_SHORT).show();
                 }
@@ -198,7 +196,7 @@ public class UserDetailsActivity extends AppCompatActivity {
                 progress_bar.setVisibility(View.VISIBLE);
                 newAccount.setEnabled(false);
 
-                MessagesClass.showToastMsg(e.getMessage(),UserDetailsActivity.this);
+                Messages_Common_Class.showToastMsg(e.getMessage(),UserDetailsActivity.this);
 
             }
         });

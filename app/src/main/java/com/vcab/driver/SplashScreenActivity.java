@@ -9,7 +9,6 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
-import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
@@ -20,14 +19,14 @@ import com.karumi.dexter.listener.PermissionDeniedResponse;
 import com.karumi.dexter.listener.PermissionGrantedResponse;
 import com.karumi.dexter.listener.PermissionRequest;
 import com.karumi.dexter.listener.single.PermissionListener;
-import com.vcab.driver.authentication.UserDetailsActivity;
 import com.vcab.driver.authentication.UserAuthenticationActivity;
 
 import java.util.concurrent.TimeUnit;
 
-import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers;
-import io.reactivex.rxjava3.core.Completable;
-import io.reactivex.rxjava3.functions.Action;
+import io.reactivex.Completable;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.functions.Action;
+
 
 public class SplashScreenActivity extends AppCompatActivity {
 
@@ -40,7 +39,7 @@ public class SplashScreenActivity extends AppCompatActivity {
 
         Completable.timer(3, TimeUnit.SECONDS, AndroidSchedulers.mainThread()).subscribe(new Action() {
             @Override
-            public void run() throws Throwable {
+            public void run() {
 
                 checkPermissions();
 
@@ -61,7 +60,7 @@ public class SplashScreenActivity extends AppCompatActivity {
                    openActivity();
 
                 } else {
-                    MessagesClass.showToastMsg("Google play services NOT  Available",SplashScreenActivity.this);
+                    Messages_Common_Class.showToastMsg("Google play services NOT  Available",SplashScreenActivity.this);
                 }
             }
 
@@ -94,7 +93,7 @@ public class SplashScreenActivity extends AppCompatActivity {
             Dialog dialog = googleApiAvailability.getErrorDialog(this, result, 201, new DialogInterface.OnCancelListener() {
                 @Override
                 public void onCancel(DialogInterface dialogInterface) {
-                    MessagesClass.showToastMsg("User Cancelled Dialog",SplashScreenActivity.this);
+                    Messages_Common_Class.showToastMsg("User Cancelled Dialog",SplashScreenActivity.this);
                 }
             });
             dialog.show();
