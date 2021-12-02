@@ -15,6 +15,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.LinearInterpolator;
+import android.widget.FrameLayout;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
@@ -81,6 +82,7 @@ import java.util.concurrent.TimeUnit;
 import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.CompositeDisposable;
+import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Action;
 import io.reactivex.functions.Consumer;
 import io.reactivex.functions.Predicate;
@@ -99,19 +101,23 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
     DatabaseReference onlineRef, currentUserRef, driversLocationRef;
     GeoFire geoFire;
 
-    Chip chip_decline;
-    CardView layout_accept;
-    CircularProgressBar circularProgressBar;
-    TextView txt_estimate_time, txt_estimate_distance;
+    private Chip chip_decline;
+    private CardView layout_accept;
+    private CircularProgressBar circularProgressBar;
+    private TextView txt_estimate_time, txt_estimate_distance;
+    private FrameLayout root_layout;
 
     //For route
     // Disposables,they're useful when e.g. you make a long-running HTTP request
     //CompositeDisposable is just a class to keep all your disposables in the same place to you can dispose all of then at once.
     private CompositeDisposable compositeDisposable = new CompositeDisposable();
+    private Disposable countDownEvent; // to remove using disposables
     private IGoogleApiInterface iGoogleApiInterface; // for api request through retrofit
     private Polyline blackPolyline, greyPolyline;
     private PolylineOptions grayPolylineOptions, blackPolylineOptions;
     private List<LatLng> polylineList;
+
+    private DriverRequestReceived driverRequestReceived;
 
 
     ValueEventListener onlineValueEventListener = new ValueEventListener() {
@@ -152,6 +158,7 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
         circularProgressBar = v.findViewById(R.id.circularProgressBar);
         txt_estimate_time = v.findViewById(R.id.txt_estimate_time);
         txt_estimate_distance = v.findViewById(R.id.txt_estimate_distance);
+        root_layout = v.findViewById(R.id.root_layout);
 
         onlineRef = FirebaseDatabase.getInstance().getReference(".info/connected"); //it is useful for your app to know when it is online or offline. which is updated every time the Firebase Realtime Database client's connection state changes
 
@@ -173,18 +180,40 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
             }
         }, 1500);
 
+        chip_decline.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+
+                if (driverRequestReceived != null) {
+
+                    if (countDownEvent != null) {
+                        countDownEvent.dispose();  // to remove using disposables.
+                        chip_decline.setVisibility(View.GONE);
+                        layout_accept.setVisibility(View.GONE);
+                        googleMap.clear();
+                        Messages_Common_Class.sendDeclineRequest(root_layout, getContext(), driverRequestReceived.getCustomerUid());
+                        driverRequestReceived = null;
+                    }
+                }
+
+            }
+        });
+
         return v;
     }
 
     @Override
     public void onStart() {
         super.onStart();
-        EventBus.getDefault().register(this);
+        if (!EventBus.getDefault().isRegistered(this))
+            EventBus.getDefault().register(this);
     }
 
 
     @Subscribe(sticky = true, threadMode = ThreadMode.MAIN)
     public void onSelectPlaceEvent(DriverRequestReceived driverRequestReceived) {
+
+        this.driverRequestReceived = driverRequestReceived;
 
         //get Current driver Location
 

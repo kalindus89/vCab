@@ -55,7 +55,7 @@ public class MyFirebaseMessagingService extends FirebaseMessagingService {
         if (dataReceive != null) {
 
             if(dataReceive.get("title").equals("RequestDriver")){
-                EventBus.getDefault().postSticky(new DriverRequestReceived(dataReceive.get("customerToken")
+                EventBus.getDefault().postSticky(new DriverRequestReceived(dataReceive.get("customerUid")
                         ,dataReceive.get("PickupLocation")));
             }
             else {

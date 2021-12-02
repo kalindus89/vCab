@@ -1,20 +1,20 @@
 package com.vcab.driver.model;
 
 public class DriverRequestReceived {
-    String customerToken;
+    String customerUid;
     String pickupLocation;
 
-    public DriverRequestReceived(String customerToken, String pickupLocation) {
-        this.customerToken = customerToken;
+    public DriverRequestReceived(String customerUid, String pickupLocation) {
+        this.customerUid = customerUid;
         this.pickupLocation = pickupLocation;
     }
 
-    public String getCustomerToken() {
-        return customerToken;
+    public String getCustomerUid() {
+        return customerUid;
     }
 
-    public void setCustomerToken(String customerToken) {
-        this.customerToken = customerToken;
+    public void getCustomerUid(String customerUid) {
+        this.customerUid = customerUid;
     }
 
     public String getPickupLocation() {
