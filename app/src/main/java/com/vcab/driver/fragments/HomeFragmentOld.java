@@ -352,7 +352,7 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
                                 layout_accept.setVisibility(View.VISIBLE);
 
                                 //count down for circular progressBar
-                                Observable.interval(100, TimeUnit.MILLISECONDS)
+                               countDownEvent= Observable.interval(100, TimeUnit.MILLISECONDS)
                                         .observeOn(AndroidSchedulers.mainThread())
                                         .doOnNext(new Consumer<Long>() {
                                             @Override
@@ -371,6 +371,7 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
                                         .doOnComplete(new Action() {
                                             @Override
                                             public void run() throws Exception {
+                                                circularProgressBar.setProgress(0);
                                                 Messages_Common_Class.showToastMsg("Fake accept action", getActivity());
                                             }
                                         })
