@@ -274,9 +274,7 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
                         "less_driving", new StringBuilder().append(location.getLatitude())
                                 .append(",")
                                 .append(location.getLongitude())
-                                .toString(), driverRequestReceived.getPickupLocation(),
-
-                        getString(R.string.google_map_api_key))
+                                .toString(), driverRequestReceived.getPickupLocation(), getString(R.string.google_map_api_key))
                         .subscribeOn(Schedulers.newThread())
                         .observeOn(AndroidSchedulers.mainThread())
                         .subscribe(returnResults -> {
