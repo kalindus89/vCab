@@ -33,7 +33,7 @@ import com.vcab.driver.MainActivity;
 import com.vcab.driver.Messages_Common_Class;
 import com.vcab.driver.R;
 import com.vcab.driver.SessionManagement;
-import com.vcab.driver.model.User;
+import com.vcab.driver.model.DriverInfoModel;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -163,7 +163,7 @@ public class UserDetailsActivity extends AppCompatActivity {
 
     private void sendDataToCloudFirestore() {
 
-        User user = new User(fName.getText().toString(),phone_number.getText().toString(),email.getText().toString(),imageUriAccessToken,"update later",0.0);
+        DriverInfoModel user = new DriverInfoModel(fName.getText().toString(),phone_number.getText().toString(),email.getText().toString(),imageUriAccessToken,"update later",0.0);
 
         Map<String, Object> userLocation = new HashMap<>();
         userLocation.put("geo_point", (new GeoPoint(0.0,0.0)));

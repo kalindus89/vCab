@@ -4,7 +4,6 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.content.ContextCompat;
-import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
 
@@ -12,7 +11,6 @@ import android.content.Intent;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Handler;
-import android.view.MenuItem;
 import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -33,7 +31,7 @@ import com.vcab.driver.fragments.HomeFragmentOld;
 import com.vcab.driver.fragments.ProfileFragment;
 import com.vcab.driver.fragments.SupportFragment;
 import com.vcab.driver.fragments.TripsFragment;
-import com.vcab.driver.model.User;
+import com.vcab.driver.model.DriverInfoModel;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -93,12 +91,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 if (task.isSuccessful()) {
                     DocumentSnapshot document = task.getResult();
                     if (document.exists()) {
-                        User user = document.toObject(User.class);
 
-                        userName.setText(user.getName());
-                        phoneNumber.setText(user.getPhone());
-                        Picasso.get().load(user.getProfileImage()).placeholder(R.drawable.add_user_two).into(profile_pic);
+                        Messages_Common_Class.driverInfo = document.toObject(DriverInfoModel.class);
+                        userName.setText(Messages_Common_Class.driverInfo.getName());
+                        phoneNumber.setText(Messages_Common_Class.driverInfo.getPhone());
+                        Picasso.get().load(Messages_Common_Class.driverInfo.getProfileImage()).placeholder(R.drawable.add_user_two).into(profile_pic);
 
+                       // System.out.println("aaaaaa "+Messages_Common_Class.driverInfo.getPhone());
                     }
                 }
             }

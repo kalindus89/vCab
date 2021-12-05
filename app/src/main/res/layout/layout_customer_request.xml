@@ -69,6 +69,7 @@
                         app:cpb_round_border="false"/>
 
                     <ImageView
+                        android:id="@+id/img_round"
                         android:layout_width="30dp"
                         android:layout_height="30dp"
                         android:layout_centerInParent="true"

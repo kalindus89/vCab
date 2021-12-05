@@ -5,7 +5,7 @@
     android:layout_height="match_parent">
 
     <androidx.cardview.widget.CardView
-        android:id="@+id/layout_accept"
+        android:id="@+id/start_vcab_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
@@ -80,6 +80,7 @@
                 android:layout_height="wrap_content">
 
                 <ImageView
+                    android:id="@+id/img_phone_call"
                     android:layout_width="30dp"
                     android:layout_height="30dp"
                     android:src="@drawable/ic_baseline_perm_phone_msg_24"
@@ -107,7 +108,7 @@
             </RelativeLayout>
 
             <androidx.appcompat.widget.AppCompatButton
-                android:id="@+id/loginWithPhone"
+                android:id="@+id/btn_start_vcab"
                 android:layout_width="match_parent"
                 android:layout_height="45dp"
                 android:layout_marginTop="16dp"
@@ -115,7 +116,7 @@
                 android:background="@drawable/btn_accept_oder_bg"
                 android:padding="10dp"
                 android:gravity="center"
-                android:enabled="false"
+                android:enabled="true"
                 android:text="Accept Request "
                 android:textColor="@color/button_enable_disable"
                 android:textSize="15sp" />

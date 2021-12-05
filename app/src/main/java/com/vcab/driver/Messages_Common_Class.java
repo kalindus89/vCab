@@ -20,6 +20,7 @@ import com.vcab.driver.firebase_notification.FCMResponse;
 import com.vcab.driver.firebase_notification.FCMSendData;
 import com.vcab.driver.firebase_notification.IFCMService;
 import com.vcab.driver.firebase_notification.RetrofitFCMClient;
+import com.vcab.driver.model.DriverInfoModel;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -33,6 +34,8 @@ import io.reactivex.schedulers.Schedulers;
 
 public class Messages_Common_Class {
 
+
+    public static DriverInfoModel driverInfo;
 
     public static void showToastMsg(String msg, Context context){
         Toast.makeText(context, msg, Toast.LENGTH_SHORT).show();

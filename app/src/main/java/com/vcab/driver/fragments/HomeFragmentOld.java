@@ -3,6 +3,7 @@ package com.vcab.driver.fragments;
 import android.Manifest;
 import android.animation.ValueAnimator;
 import android.content.pm.PackageManager;
+import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.location.Address;
 import android.location.Geocoder;
@@ -10,18 +11,24 @@ import android.location.Location;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.LinearInterpolator;
+import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.cardview.widget.CardView;
 import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.core.widget.ImageViewCompat;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
 
@@ -57,12 +64,15 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.GeoPoint;
 import com.mikhaellopez.circularprogressbar.CircularProgressBar;
 import com.vcab.driver.Messages_Common_Class;
 import com.vcab.driver.R;
+import com.vcab.driver.model.CustomerModel;
 import com.vcab.driver.model.DriverRequestReceived;
+import com.vcab.driver.model.TripPlanModel;
 import com.vcab.driver.retrofit_remote.IGoogleApiInterface;
 import com.vcab.driver.retrofit_remote.RetrofitClient;
 
@@ -77,6 +87,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 import io.reactivex.Observable;
@@ -102,10 +113,15 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
     GeoFire geoFire;
 
     private Chip chip_decline;
-    private CardView layout_accept;
+    private CardView layout_accept, start_vcab_layout;
     private CircularProgressBar circularProgressBar;
-    private TextView txt_estimate_time, txt_estimate_distance;
+    private TextView txt_estimate_time, txt_estimate_distance, txt_rating,
+            txt_type_vcab, txt_start_estimate_distance, txt_start_estimate_time, txt_customer_name;
     private FrameLayout root_layout;
+    private ImageView img_round, img_phone_call;
+    private Button btn_start_vcab;
+    private boolean isTripStart = false;
+    private boolean onlineSystemAlreadyRegister = false;
 
     //For route
     // Disposables,they're useful when e.g. you make a long-running HTTP request
@@ -159,6 +175,16 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
         txt_estimate_time = v.findViewById(R.id.txt_estimate_time);
         txt_estimate_distance = v.findViewById(R.id.txt_estimate_distance);
         root_layout = v.findViewById(R.id.root_layout);
+        txt_rating = v.findViewById(R.id.txt_rating);
+        txt_type_vcab = v.findViewById(R.id.txt_type_vcab);
+        img_round = v.findViewById(R.id.img_round);
+
+        start_vcab_layout = v.findViewById(R.id.start_vcab_layout);
+        txt_customer_name = v.findViewById(R.id.txt_customer_name);
+        txt_start_estimate_distance = v.findViewById(R.id.txt_start_estimate_distance);
+        txt_start_estimate_time = v.findViewById(R.id.txt_start_estimate_time);
+        img_phone_call = v.findViewById(R.id.img_phone_call);
+        btn_start_vcab = v.findViewById(R.id.btn_start_vcab);
 
         onlineRef = FirebaseDatabase.getInstance().getReference(".info/connected"); //it is useful for your app to know when it is online or offline. which is updated every time the Firebase Realtime Database client's connection state changes
 
@@ -176,7 +202,7 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
                 transaction.replace(R.id.google_map, mapFragment).commit();
 
                 showMap();
-                updateLastKnowLocations();
+                saveDataInFirebaseDatabase();
             }
         }, 1500);
 
@@ -336,8 +362,8 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
                                 JSONObject distanceEstimate = legObject.getJSONObject("distance");
                                 String distance = distanceEstimate.getString("text");
 
-                                txt_estimate_time.setText(duration);
-                                txt_estimate_distance.setText(distance);
+                                txt_estimate_time.setText(duration); // duration to user pick up location
+                                txt_estimate_distance.setText(distance); // distance to user pick up location
 
                                 googleMap.addMarker(new MarkerOptions()
                                         .icon(BitmapDescriptorFactory.defaultMarker())
@@ -352,7 +378,7 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
                                 layout_accept.setVisibility(View.VISIBLE);
 
                                 //count down for circular progressBar
-                               countDownEvent= Observable.interval(100, TimeUnit.MILLISECONDS)
+                                countDownEvent = Observable.interval(100, TimeUnit.MILLISECONDS)
                                         .observeOn(AndroidSchedulers.mainThread())
                                         .doOnNext(new Consumer<Long>() {
                                             @Override
@@ -365,14 +391,16 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
                                         .takeUntil(new Predicate<Long>() {
                                             @Override
                                             public boolean test(@NonNull Long aLong) throws Exception {
-                                                return aLong == 200; //20 seconds to decline
+                                                return aLong == 100; //20 seconds to decline
                                             }
                                         })
                                         .doOnComplete(new Action() {
                                             @Override
                                             public void run() throws Exception {
-                                                circularProgressBar.setProgress(0);
-                                                Messages_Common_Class.showToastMsg("Fake accept action", getActivity());
+
+                                                Messages_Common_Class.showToastMsg("on complete",getActivity());
+                                                createTripPlan(driverRequestReceived, duration, distance);
+
                                             }
                                         })
                                         .subscribe();
@@ -388,6 +416,158 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
 
     }
 
+    private void createTripPlan(DriverRequestReceived driverRequestReceived, String duration, String distance) {
+
+        setProcessLayout(true);
+
+        //Sync server time device - https://stackoverflow.com/questions/50257774/device-time-vs-server-time-on-mobile-application-what-is-the-good-practice
+        FirebaseDatabase.getInstance().getReference(".info/serverTimeOffset")
+                .addListenerForSingleValueEvent(new ValueEventListener() {
+                    @Override
+                    public void onDataChange(@NonNull DataSnapshot snapshot) {
+
+                        long timeOffSet = snapshot.getValue(Long.class);
+
+                        FirebaseFirestore.getInstance().document("users/customers/userData/" + driverRequestReceived.getCustomerUid())
+                                .get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+                            @Override
+                            public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                                if (task.isSuccessful()) {
+                                    DocumentSnapshot document = task.getResult();
+                                    if (document.exists()) {
+                                        Messages_Common_Class.showToastMsg("user data correct",getActivity());
+
+                                        CustomerModel customerModel = document.toObject(CustomerModel.class);
+
+                                        //get driver location
+                                        if (ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.ACCESS_FINE_LOCATION)
+                                                != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                                            return;
+                                        }
+                                        fusedLocationProviderClient.getLastLocation().addOnSuccessListener(new OnSuccessListener<Location>() {
+                                            @Override
+                                            public void onSuccess(Location location) {
+
+                                                TripPlanModel tripPlanModel = new TripPlanModel();
+
+                                                tripPlanModel.setDriverUid(FirebaseAuth.getInstance().getCurrentUser().getProviderId());
+                                                tripPlanModel.setCustomerUid(driverRequestReceived.getCustomerUid());
+                                                if (Messages_Common_Class.driverInfo != null) {
+                                                    tripPlanModel.setDriverInfoModel(Messages_Common_Class.driverInfo);
+                                                }
+                                                tripPlanModel.setCustomerModel(customerModel);
+                                                tripPlanModel.setOriginCustomer(driverRequestReceived.getPickupLocation());
+                                                tripPlanModel.setDestinationCustomer(driverRequestReceived.getCustomerDestinationLocation());
+                                                tripPlanModel.setDistanceCustomerPickup(distance);
+                                                tripPlanModel.setDurationCustomerPickup(duration);
+                                                tripPlanModel.setCurrentLat(location.getLatitude());
+                                                tripPlanModel.setCurrentLng(location.getLongitude());
+                                                tripPlanModel.setTicketNumber(generateTicketNumber(timeOffSet));
+
+                                                FirebaseDatabase.getInstance().getReference("Trips").child(FirebaseAuth.getInstance().getCurrentUser().getUid())
+                                                        .setValue(tripPlanModel).addOnSuccessListener(new OnSuccessListener<Void>() {
+                                                    @Override
+                                                    public void onSuccess(Void unused) {
+
+                                                        txt_customer_name.setText(customerModel.getName());
+                                                        txt_start_estimate_time.setText(duration);
+                                                        txt_start_estimate_distance.setText(distance);
+
+                                                        setOfflineModeForDriver(driverRequestReceived, duration, distance);
+
+                                                    }
+                                                }).addOnFailureListener(new OnFailureListener() {
+                                                    @Override
+                                                    public void onFailure(@NonNull Exception e) {
+                                                        Messages_Common_Class.showSnackBar(e.getMessage(), mapFragment.getView());
+                                                    }
+                                                });
+
+
+                                            }
+                                        }).addOnFailureListener(new OnFailureListener() {
+                                            @Override
+                                            public void onFailure(@NonNull Exception e) {
+                                                Messages_Common_Class.showSnackBar(e.getMessage(), getView());
+
+                                            }
+                                        });
+
+
+                                    } else {
+
+                                        Messages_Common_Class.showSnackBar("Customer not exist", getView());
+
+                                    }
+                                } else {
+                                    Toast.makeText(getActivity(), "Not ok big", Toast.LENGTH_SHORT).show();
+                                }
+                            }
+                        });
+
+                    }
+
+                    @Override
+                    public void onCancelled(@NonNull DatabaseError error) {
+
+                        Messages_Common_Class.showSnackBar(error.getMessage(), getView());
+                    }
+                });
+
+    }
+
+    private void setOfflineModeForDriver(DriverRequestReceived driverRequestReceived, String duration, String distance) {
+
+        // go offline for other customers..
+        if (currentUserRef != null) {
+            currentUserRef.removeValue();
+        }
+        setProcessLayout(false);
+        layout_accept.setVisibility(View.GONE);
+        start_vcab_layout.setVisibility(View.VISIBLE);
+
+        isTripStart = true;
+
+
+    }
+
+    private String generateTicketNumber(long timeOffSet) {
+
+        Random random = new Random();
+        Long current = System.currentTimeMillis() + timeOffSet;
+        Long unique = current + random.nextLong();
+
+        if(unique<0){
+            unique*=-1; // because ticket number always must a positive number
+        }
+        return String.valueOf(unique);
+
+    }
+
+    private void setProcessLayout(boolean isProcess) {
+
+
+        int color = -1;
+
+        if (isProcess) {
+            color = ContextCompat.getColor(getContext(), R.color.dark_gray);
+            circularProgressBar.setIndeterminateMode(true);
+            txt_rating.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, R.drawable.star_icon_dark_gray, 0);
+        } else {
+            color = ContextCompat.getColor(getContext(), R.color.white);
+            circularProgressBar.setIndeterminateMode(false);
+            circularProgressBar.setProgress(0);
+            txt_rating.setCompoundDrawablesRelativeWithIntrinsicBounds(0, 0, R.drawable.star_icon, 0);
+
+        }
+        txt_estimate_time.setTextColor(color);
+        txt_estimate_distance.setTextColor(color);
+        ImageViewCompat.setImageTintList(img_round, ColorStateList.valueOf(color));
+        txt_type_vcab.setTextColor(color);
+        txt_rating.setTextColor(color);
+
+    }
+
     @Override
     public void onResume() {
         super.onResume();
@@ -396,7 +576,10 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
 
     private void registerOnlineSystem() {
 
-        onlineRef.addValueEventListener(onlineValueEventListener);
+        if (!onlineSystemAlreadyRegister) {
+            onlineRef.addValueEventListener(onlineValueEventListener);
+            onlineSystemAlreadyRegister=true;
+        }
 
     }
 
@@ -406,11 +589,15 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
         geoFire.removeLocation(FirebaseAuth.getInstance().getCurrentUser().getUid());
         onlineRef.removeEventListener(onlineValueEventListener);
 
-        compositeDisposable.clear();
         if (EventBus.getDefault().hasSubscriberForEvent(DriverRequestReceived.class)) {
             EventBus.getDefault().removeStickyEvent(DriverRequestReceived.class);
-            EventBus.getDefault().unregister(this);
+
         }
+        EventBus.getDefault().unregister(this);
+        compositeDisposable.clear();
+
+        onlineSystemAlreadyRegister = false;
+
 
         super.onDestroy();
 
@@ -441,72 +628,12 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
 
     }
 
-    private void updateLastKnowLocations() {
-
-        if (ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-            return;
-        }
-
-        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(getActivity());
-
-        fusedLocationProviderClient.getLastLocation().addOnFailureListener(new OnFailureListener() {
-            @Override
-            public void onFailure(@NonNull Exception e) {
-
-                Messages_Common_Class.showToastMsg(e.getMessage(), getContext());
-
-            }
-        }).addOnSuccessListener(new OnSuccessListener<Location>() {
-            @Override
-            public void onSuccess(Location location) {
-
-                if (googleMap != null) {
-                    //   markOnMap(locationResult.getLastLocation(),16,);
-                    LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
-                    googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 16));
-
-                    Geocoder geocoder = new Geocoder(getContext(), Locale.getDefault());
-
-                    List<Address> addressList;
-
-                    try {
-                        addressList = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
-                        String cityName = addressList.get(0).getLocality();
-
-                        //  addressList.get(0).getLocality() city name
-                        //addressList.get(0).getSubLocality()
-                        // addressList.get(0).getAddressLine(0) address eg Kidelpitiya - Gorokgoda - Kahawala Rd, Sri Lanka
-                        //addressList.get(0).getAdminArea() Western Province
-                        //addressList.get(0).getSubAdminArea()  Kalutara
-
-                        if (cityName == null) {
-                            cityName = addressList.get(0).getAddressLine(0);
-                        }
-                        //Query
-                        driversLocationRef = FirebaseDatabase.getInstance().getReference("DriversLocation").child(cityName); //DriversLocation path
-                        currentUserRef = driversLocationRef.child(FirebaseAuth.getInstance().getCurrentUser().getUid());//path inside DriversLocation
-
-                        geoFire = new GeoFire(driversLocationRef);
-
-                        saveDataInFirebaseDatabase();
-
-                    } catch (IOException e) {
-                        Messages_Common_Class.showToastMsg(e.getMessage(), getActivity());
-                    }
-
-                    //  saveDataInFirestore(locationResult);
-                }
-
-            }
-        });
-
-        registerOnlineSystem();
-
-
-    }
 
     private void saveDataInFirebaseDatabase() {
 
+        if (fusedLocationProviderClient == null) {
+            fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(getActivity());
+        }
         locationRequest = LocationRequest.create();
         locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
         locationRequest.setInterval(15000); // location update time
@@ -527,28 +654,70 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
 
                         if (googleMap != null) {
                             //   markOnMap(locationResult.getLastLocation(),16,);
+                            LatLng latLng = new LatLng(locationResult.getLastLocation().getLatitude(), locationResult.getLastLocation().getLongitude());
+                            googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 16));
 
-                            try {
+                            if (!isTripStart) {
+                                Geocoder geocoder = new Geocoder(getContext(), Locale.getDefault());
+                                List<Address> addressList;
+                                try {
 
-                                geoFire.setLocation(FirebaseAuth.getInstance().getCurrentUser().getUid(), // add current driver location to firebase database. path same as currentUserRef. otherwise data not delete when app close
-                                        new GeoLocation(locationResult.getLastLocation().getLatitude(), locationResult.getLastLocation().getLongitude()), new GeoFire.CompletionListener() {
-                                            @Override
-                                            public void onComplete(String key, DatabaseError error) {
+                                    addressList = geocoder.getFromLocation(locationResult.getLastLocation().getLatitude(), locationResult.getLastLocation().getLongitude(), 1);
+                                    String cityName = addressList.get(0).getLocality();
 
-                                                if (error != null) {
-                                                    Messages_Common_Class.showToastMsg(error.getMessage(), getActivity());
-                                                } else {
-                                                    Messages_Common_Class.showToastMsg("You are online", getActivity());
+                                    //  addressList.get(0).getLocality() city name
+                                    //addressList.get(0).getSubLocality()
+                                    // addressList.get(0).getAddressLine(0) address eg Kidelpitiya - Gorokgoda - Kahawala Rd, Sri Lanka
+                                    //addressList.get(0).getAdminArea() Western Province
+                                    //addressList.get(0).getSubAdminArea()  Kalutara
+
+                                    if (cityName == null) {
+                                        cityName = addressList.get(0).getAddressLine(0);
+                                    }
+                                    //Query
+                                    driversLocationRef = FirebaseDatabase.getInstance().getReference("DriversLocation").child(cityName); //DriversLocation path
+                                    currentUserRef = driversLocationRef.child(FirebaseAuth.getInstance().getCurrentUser().getUid());//path inside DriversLocation
+
+                                    geoFire = new GeoFire(driversLocationRef);
+
+                                    geoFire.setLocation(FirebaseAuth.getInstance().getCurrentUser().getUid(), // add current driver location to firebase database. path same as currentUserRef. otherwise data not delete when app close
+                                            new GeoLocation(locationResult.getLastLocation().getLatitude(), locationResult.getLastLocation().getLongitude()), new GeoFire.CompletionListener() {
+                                                @Override
+                                                public void onComplete(String key, DatabaseError error) {
+
+                                                    if (error != null) {
+                                                        Messages_Common_Class.showToastMsg(error.getMessage(), getActivity());
+                                                    } else {
+                                                        Messages_Common_Class.showToastMsg("You are online", getActivity());
+                                                    }
+
                                                 }
+                                            });
 
-                                            }
-                                        });
+                                } catch (Exception e) {
+                                    Messages_Common_Class.showToastMsg(e.getMessage(), getActivity());
+                                }
 
-                            } catch (Exception e) {
-                                Messages_Common_Class.showToastMsg(e.getMessage(), getActivity());
+                                //  saveDataInFirestore(locationResult);
+                            } else {
+
+                                //Update drier location in trips database
+
+                                Map<String, Object> updateData = new HashMap<>();
+                                updateData.put("currentLat", locationResult.getLastLocation().getLatitude());
+                                updateData.put("currentLng", locationResult.getLastLocation().getLongitude());
+
+                                FirebaseDatabase.getInstance().getReference("Trips")
+                                        .child(FirebaseAuth.getInstance().getCurrentUser().getUid())
+                                        .updateChildren(updateData)
+                                        .addOnFailureListener(e -> Messages_Common_Class.showSnackBar(e.getMessage(), mapFragment.getView())).addOnSuccessListener(new OnSuccessListener<Void>() {
+                                    @Override
+                                    public void onSuccess(Void unused) {
+
+                                    }
+                                });
+
                             }
-
-                            //  saveDataInFirestore(locationResult);
                         }
 
 
@@ -567,7 +736,7 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
         }
         fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallBack, Looper.myLooper());
 
-
+        registerOnlineSystem();
     }
 
     private void saveDataInFirestore(LocationResult locationResult) {

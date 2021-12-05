@@ -1,6 +1,6 @@
 package com.vcab.driver.model;
 
-public class User {
+public class CustomerModel {
 
     private String name;
     private String phone;
@@ -9,10 +9,10 @@ public class User {
     private String firebaseToken;
     private double rating;
 
-    public User() {
+    public CustomerModel() {
     }
 
-    public User(String name, String phone, String email, String profileImage, String firebaseToken, double rating) {
+    public CustomerModel(String name, String phone, String email, String profileImage, String firebaseToken, double rating) {
         this.name = name;
         this.phone = phone;
         this.email = email;
@@ -69,3 +69,4 @@ public class User {
         this.rating = rating;
     }
 }
+
