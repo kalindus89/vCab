@@ -139,4 +139,65 @@ public class Messages_Common_Class {
         });
 
     }
+
+    public static void sendAcceptRequestToCustomer(View view, Context context, String customerUid, String ticketID) {
+
+        CompositeDisposable compositeDisposable = new CompositeDisposable();
+        IFCMService ifcmService = RetrofitFCMClient.getInstance().create(IFCMService.class);
+
+        //get Customer Token to send notification
+        DocumentReference nycRef = FirebaseFirestore.getInstance().document("users/customers/userData/" + customerUid);
+
+        nycRef.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+            @Override
+            public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                if (task.isSuccessful()) {
+                    DocumentSnapshot document = task.getResult();
+                    if (document.exists()) {
+
+                        String driverToken = document.get("firebaseToken").toString();
+
+                        Map<String, String> notificationData = new HashMap<>();
+                        notificationData.put("title", "Decline");
+                        notificationData.put("body", "This message represent for action driver DECLINE");
+                        notificationData.put("driverUid", FirebaseAuth.getInstance().getCurrentUser().getUid());
+
+                        FCMSendData fcmSendData = new FCMSendData(driverToken, notificationData);
+
+                        compositeDisposable.add(ifcmService.sendNotification(fcmSendData)
+                                .subscribeOn(Schedulers.newThread())
+                                .observeOn(AndroidSchedulers.mainThread())
+                                .subscribe(new Consumer<FCMResponse>() {
+                                    @Override
+                                    public void accept(FCMResponse fcmResponse) throws Exception {
+
+                                        if (fcmResponse.getSuccess()== 0) {
+
+                                            compositeDisposable.clear();
+                                            showSnackBar("Failed to send request to customer",view);
+
+                                        }else {
+                                            showSnackBar("Request Decline Success!",view);
+
+                                        }
+
+                                    }
+                                }, new Consumer<Throwable>() {
+                                    @Override
+                                    public void accept(Throwable throwable) throws Exception {
+                                        compositeDisposable.clear();
+                                        showSnackBar(throwable.getMessage(),view);
+                                    }
+                                }));
+
+
+                    } else {
+                    }
+                } else {
+                    compositeDisposable.clear();
+                    Messages_Common_Class.showSnackBar("Try again. No customer token found", view);
+                }
+            }
+        });
+    }
 }

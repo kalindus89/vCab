@@ -460,7 +460,8 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
                                                 tripPlanModel.setDurationCustomerPickup(duration);
                                                 tripPlanModel.setCurrentLat(location.getLatitude());
                                                 tripPlanModel.setCurrentLng(location.getLongitude());
-                                                tripPlanModel.setTicketNumber(generateTicketNumber(timeOffSet));
+                                                String ticketNumber=generateTicketNumber(timeOffSet);
+                                                tripPlanModel.setTicketNumber(ticketNumber);
 
                                                 FirebaseDatabase.getInstance().getReference("Trips").child(FirebaseAuth.getInstance().getCurrentUser().getUid())
                                                         .setValue(tripPlanModel).addOnSuccessListener(new OnSuccessListener<Void>() {
@@ -471,7 +472,7 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
                                                         txt_start_estimate_time.setText(duration);
                                                         txt_start_estimate_distance.setText(distance);
 
-                                                        setOfflineModeForDriver(driverRequestReceived, duration, distance);
+                                                        setOfflineModeForDriver(driverRequestReceived, duration, distance,ticketNumber);
 
                                                     }
                                                 }).addOnFailureListener(new OnFailureListener() {
@@ -514,7 +515,10 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
 
     }
 
-    private void setOfflineModeForDriver(DriverRequestReceived driverRequestReceived, String duration, String distance) {
+    private void setOfflineModeForDriver(DriverRequestReceived driverRequestReceived, String duration, String distance, String ticketID) {
+
+
+        Messages_Common_Class.sendAcceptRequestToCustomer(mapFragment.getView(),getContext(),driverRequestReceived.getCustomerUid(),ticketID);
 
         // go offline for other customers..
         if (currentUserRef != null) {
