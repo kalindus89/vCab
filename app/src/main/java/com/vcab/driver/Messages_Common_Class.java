@@ -158,9 +158,10 @@ public class Messages_Common_Class {
                         String driverToken = document.get("firebaseToken").toString();
 
                         Map<String, String> notificationData = new HashMap<>();
-                        notificationData.put("title", "Decline");
-                        notificationData.put("body", "This message represent for action driver DECLINE");
+                        notificationData.put("title", "Accept");
+                        notificationData.put("body", "This message represent for action driver ACCEPT");
                         notificationData.put("driverUid", FirebaseAuth.getInstance().getCurrentUser().getUid());
+                        notificationData.put("tripId", ticketID);
 
                         FCMSendData fcmSendData = new FCMSendData(driverToken, notificationData);
 
@@ -177,7 +178,7 @@ public class Messages_Common_Class {
                                             showSnackBar("Failed to send request to customer",view);
 
                                         }else {
-                                            showSnackBar("Request Decline Success!",view);
+                                            showSnackBar("Request Accept Success!",view);
 
                                         }
 
