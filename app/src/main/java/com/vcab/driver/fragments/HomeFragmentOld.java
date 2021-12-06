@@ -448,7 +448,7 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
 
                                                 TripPlanModel tripPlanModel = new TripPlanModel();
 
-                                                tripPlanModel.setDriverUid(FirebaseAuth.getInstance().getCurrentUser().getProviderId());
+                                                tripPlanModel.setDriverUid(FirebaseAuth.getInstance().getCurrentUser().getUid());
                                                 tripPlanModel.setCustomerUid(driverRequestReceived.getCustomerUid());
                                                 if (Messages_Common_Class.driverInfo != null) {
                                                     tripPlanModel.setDriverInfoModel(Messages_Common_Class.driverInfo);

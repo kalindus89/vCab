@@ -36,14 +36,14 @@ import com.vcab.driver.model.DriverInfoModel;
 import java.util.HashMap;
 import java.util.Map;
 
-public class MainActivity extends AppCompatActivity implements View.OnClickListener{
+public class MainActivity extends AppCompatActivity implements View.OnClickListener {
 
     FrameLayout frameLayout;
-    LinearLayout home_layout,trips_layout,profile_layout,support_layout,logout_layout;
+    LinearLayout home_layout, trips_layout, profile_layout, support_layout, logout_layout;
     DrawerLayout drawerLayout;
     NavigationView navigationView;
     Toolbar toolBar;
-    TextView userName,phoneNumber;
+    TextView userName, phoneNumber;
     ImageView profile_pic;
 
 
@@ -81,8 +81,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private void getDriverInformation() {
+//run in thread if you want to get info every time. look tracking and chatting app
 
-        String fireStorePath="users/drivers/userData/"+FirebaseAuth.getInstance().getUid();
+        String fireStorePath = "users/drivers/userData/" + FirebaseAuth.getInstance().getUid();
         DocumentReference docRef = FirebaseFirestore.getInstance().document(fireStorePath);
 
         docRef.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
@@ -91,13 +92,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 if (task.isSuccessful()) {
                     DocumentSnapshot document = task.getResult();
                     if (document.exists()) {
-
                         Messages_Common_Class.driverInfo = document.toObject(DriverInfoModel.class);
                         userName.setText(Messages_Common_Class.driverInfo.getName());
                         phoneNumber.setText(Messages_Common_Class.driverInfo.getPhone());
                         Picasso.get().load(Messages_Common_Class.driverInfo.getProfileImage()).placeholder(R.drawable.add_user_two).into(profile_pic);
 
-                       // System.out.println("aaaaaa "+Messages_Common_Class.driverInfo.getPhone());
+                        // System.out.println("aaaaaa "+Messages_Common_Class.driverInfo.getPhone());
                     }
                 }
             }
@@ -133,12 +133,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         }
 
 
-
                         String refreshToken = task.getResult();
 
                         if (!refreshToken.equals(new SessionManagement().getFBToken(getApplicationContext()))) {
 
-                            String fireStorePath="users/drivers/userData/"+FirebaseAuth.getInstance().getUid();
+                            String fireStorePath = "users/drivers/userData/" + FirebaseAuth.getInstance().getUid();
 
                             DocumentReference nycRef = FirebaseFirestore.getInstance().document(fireStorePath);
                             nycRef.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
@@ -176,8 +175,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         support_layout = (LinearLayout) findViewById(R.id.support_layout);
         logout_layout = (LinearLayout) findViewById(R.id.logout_layout);
 
-        userName =   findViewById(R.id.userName);
-        phoneNumber =  findViewById(R.id.phoneNumber);
+        userName = findViewById(R.id.userName);
+        phoneNumber = findViewById(R.id.phoneNumber);
         profile_pic = findViewById(R.id.profile_pic);
 
         home_layout.setOnClickListener(this);
@@ -190,7 +189,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     @Override
     public void onClick(View view) {
-        switch (view.getId()){/*
+        switch (view.getId()) {/*
             case R.id.drawerIcon:
                 drawerLayout.openDrawer(navigationView, true);
                 break;*/
@@ -208,13 +207,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 break;
             case R.id.logout_layout:
                 FirebaseAuth.getInstance().signOut();
-                startActivity(new Intent(MainActivity.this,SplashScreenActivity.class));
+                startActivity(new Intent(MainActivity.this, SplashScreenActivity.class));
                 finish();
                 break;
 
         }
     }
-
 
 
 }
