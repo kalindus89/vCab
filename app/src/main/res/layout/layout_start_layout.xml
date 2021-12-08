@@ -133,19 +133,41 @@
 
             </RelativeLayout>
 
-            <androidx.appcompat.widget.AppCompatButton
-                android:id="@+id/btn_start_vcab"
+            <FrameLayout
                 android:layout_width="match_parent"
-                android:layout_height="45dp"
-                android:layout_marginTop="16dp"
-                android:layout_marginBottom="3dp"
-                android:background="@drawable/btn_accept_oder_bg"
-                android:enabled="false"
-                android:gravity="center"
-                android:padding="10dp"
-                android:text="Accept Request "
-                android:textColor="@color/button_enable_disable"
-                android:textSize="15sp" />
+                android:layout_height="wrap_content">
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btn_start_vcab"
+                    android:layout_width="match_parent"
+                    android:layout_height="45dp"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="3dp"
+                    android:background="@drawable/btn_accept_oder_bg"
+                    android:enabled="false"
+                    android:gravity="center"
+                    android:padding="10dp"
+                    android:text="Accept Request "
+                    android:textColor="@color/button_enable_disable"
+                    android:textSize="15sp" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btn_complete_trip"
+                    android:layout_width="match_parent"
+                    android:layout_height="45dp"
+                    android:layout_marginTop="16dp"
+                    android:layout_marginBottom="3dp"
+                    android:background="@drawable/btn_accept_oder_bg"
+                    android:enabled="false"
+                    android:gravity="center"
+                    android:padding="10dp"
+                    android:visibility="gone"
+                    android:text="Complete Trip"
+                    android:textColor="@color/button_enable_disable"
+                    android:textSize="15sp" />
+
+            </FrameLayout>
+
         </LinearLayout>
 
     </androidx.cardview.widget.CardView>

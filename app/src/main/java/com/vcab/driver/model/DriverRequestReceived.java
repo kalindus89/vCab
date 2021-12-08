@@ -4,14 +4,16 @@ public class DriverRequestReceived {
     String customerUid;
     String pickupLocation;
     String CustomerDestinationLocation;
+    String CustomerDestinationAddress;
 
     public DriverRequestReceived() {
     }
 
-    public DriverRequestReceived(String customerUid, String pickupLocation, String customerDestinationLocation) {
+    public DriverRequestReceived(String customerUid, String pickupLocation, String customerDestinationLocation, String CustomerDestinationAddress) {
         this.customerUid = customerUid;
         this.pickupLocation = pickupLocation;
-        CustomerDestinationLocation = customerDestinationLocation;
+        this.CustomerDestinationLocation = customerDestinationLocation;
+        this.CustomerDestinationAddress = CustomerDestinationAddress;
     }
 
     public String getCustomerUid() {
@@ -36,5 +38,13 @@ public class DriverRequestReceived {
 
     public void setCustomerDestinationLocation(String customerDestinationLocation) {
         CustomerDestinationLocation = customerDestinationLocation;
+    }
+
+    public String getCustomerDestinationAddress() {
+        return CustomerDestinationAddress;
+    }
+
+    public void setCustomerDestinationAddress(String customerDestinationAddress) {
+        CustomerDestinationAddress = customerDestinationAddress;
     }
 }

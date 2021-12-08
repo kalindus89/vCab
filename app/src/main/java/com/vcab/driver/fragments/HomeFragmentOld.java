@@ -127,7 +127,7 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
     private LinearLayout layout_notify_customer;
     private FrameLayout root_layout;
     private ImageView img_round, img_phone_call;
-    private Button btn_start_vcab;
+    private Button btn_start_vcab, btn_complete_trip;
     private boolean isTripStart = false;
     private boolean onlineSystemAlreadyRegister = false;
 
@@ -140,11 +140,84 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
     private Polyline blackPolyline, greyPolyline;
     private PolylineOptions grayPolylineOptions, blackPolylineOptions;
     private List<LatLng> polylineList;
+    private CountDownTimer waiting_timer;
 
     private DriverRequestReceived driverRequestReceived;
 
-    private GeoFire pickupGeoFire;
-    private GeoQuery pickupGeoQuery;
+    private GeoFire pickupGeoFire, destinationGeoFire;
+    private GeoQuery pickupGeoQuery, destinationGeoQuery;
+
+
+    private GeoQueryEventListener pickupGeoQueryListener = new GeoQueryEventListener() {
+        @Override
+        public void onKeyEntered(String key, GeoLocation location) {
+            btn_start_vcab.setEnabled(true); // when driver arrived pickup location. so he can start trip with customer
+
+            Messages_Common_Class.sendNotifyToCustomer(getContext(), root_layout, key);
+
+            if (pickupGeoQuery != null) {
+
+                pickupGeoFire.removeLocation(key);
+                pickupGeoFire = null;
+                pickupGeoQuery.removeAllListeners();
+            }
+        }
+
+        @Override
+        public void onKeyExited(String key) {
+            btn_start_vcab.setEnabled(false);
+        }
+
+        @Override
+        public void onKeyMoved(String key, GeoLocation location) {
+
+        }
+
+        @Override
+        public void onGeoQueryReady() {
+
+        }
+
+        @Override
+        public void onGeoQueryError(DatabaseError error) {
+
+        }
+    };
+
+    private GeoQueryEventListener destinationGeoQueryListener = new GeoQueryEventListener() {
+        @Override
+        public void onKeyEntered(String key, GeoLocation location) {
+
+            btn_complete_trip.setEnabled(true);
+
+            if (destinationGeoQuery != null) {
+                destinationGeoFire.removeLocation(key);
+                destinationGeoFire = null;
+                destinationGeoQuery.removeAllListeners();
+            }
+
+        }
+
+        @Override
+        public void onKeyExited(String key) {
+
+        }
+
+        @Override
+        public void onKeyMoved(String key, GeoLocation location) {
+
+        }
+
+        @Override
+        public void onGeoQueryReady() {
+
+        }
+
+        @Override
+        public void onGeoQueryError(DatabaseError error) {
+
+        }
+    };
 
 
     ValueEventListener onlineValueEventListener = new ValueEventListener() {
@@ -196,6 +269,7 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
         txt_start_estimate_time = v.findViewById(R.id.txt_start_estimate_time);
         img_phone_call = v.findViewById(R.id.img_phone_call);
         btn_start_vcab = v.findViewById(R.id.btn_start_vcab);
+        btn_complete_trip = v.findViewById(R.id.btn_complete_trip);
 
         layout_notify_customer = v.findViewById(R.id.layout_notify_customer);
         txt_notify_customer = v.findViewById(R.id.txt_notify_customer);
@@ -240,8 +314,158 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
             }
         });
 
+        btn_start_vcab.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                //clear route
+
+                if (blackPolyline != null) {
+                    blackPolyline.remove();
+                }
+                if (greyPolyline != null) {
+                    greyPolyline.remove();
+                }
+
+                if (waiting_timer != null) {
+                    waiting_timer.cancel();
+                }
+
+                layout_notify_customer.setVisibility(View.GONE);
+
+                if (driverRequestReceived != null) {
+
+                    LatLng destinationLatLng = new LatLng(
+                            Double.parseDouble(driverRequestReceived.getPickupLocation().split(",")[0]),
+                            Double.parseDouble(driverRequestReceived.getPickupLocation().split(",")[1])
+                    );
+
+                    googleMap.addMarker(new MarkerOptions()
+                    .position(destinationLatLng)
+                    .title(driverRequestReceived.getCustomerDestinationAddress())
+                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_YELLOW)));
+
+                    //draw path to customer trip end destination
+
+                    drawPathFromCurrentLocationToDestination(driverRequestReceived.getCustomerDestinationLocation());
+
+                }
+
+                btn_start_vcab.setVisibility(View.GONE);
+                chip_decline.setVisibility(View.GONE);
+                btn_complete_trip.setVisibility(View.VISIBLE);
+
+            }
+        });
+
+        btn_complete_trip.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Messages_Common_Class.showSnackBar("Trip Completed!",root_layout);
+            }
+        });
+
         return v;
     }
+
+    private void drawPathFromCurrentLocationToDestination(String customerDestinationLocation) {
+
+        if (ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        if (fusedLocationProviderClient == null) {
+            fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(getActivity());
+        }
+        fusedLocationProviderClient.getLastLocation().addOnSuccessListener(new OnSuccessListener<Location>() {
+            @Override
+            public void onSuccess(Location location) {
+                iGoogleApiInterface = RetrofitClient.getInstance().create(IGoogleApiInterface.class);
+                compositeDisposable
+                        .add(iGoogleApiInterface.getDirection("driving",
+                                "less_driving", new StringBuilder().append(location.getLatitude())
+                                        .append(",")
+                                        .append(location.getLongitude())
+                                        .toString(), customerDestinationLocation, getString(R.string.google_map_api_key))
+                                .subscribeOn(Schedulers.newThread())
+                                .observeOn(AndroidSchedulers.mainThread())
+                                .subscribe(returnResults -> {
+
+                                    // Log.d("Api_return",returnResults);
+
+                                    try {
+
+                                        JSONObject jsonObject = new JSONObject(returnResults);
+                                        JSONArray jsonArray = jsonObject.getJSONArray("routes");
+
+                                        for (int i = 0; i < jsonArray.length(); i++) {
+
+                                            JSONObject route = jsonArray.getJSONObject(i);
+                                            JSONObject poly = route.getJSONObject("overview_polyline");
+                                            String polyline = poly.getString("points");
+                                            polylineList = Messages_Common_Class.decodePoly(polyline);
+
+                                        }
+                                        //polyline animation. black to gray
+
+                                        //grey polyline animations
+                                        grayPolylineOptions = new PolylineOptions();
+                                        grayPolylineOptions.color(Color.GRAY);
+                                        grayPolylineOptions.width(12);
+                                        grayPolylineOptions.startCap(new SquareCap());
+                                        grayPolylineOptions.jointType(JointType.ROUND);
+                                        grayPolylineOptions.addAll(polylineList);
+
+                                        greyPolyline = googleMap.addPolyline(grayPolylineOptions);
+
+                                        //black polyline animations
+                                        blackPolylineOptions = new PolylineOptions();
+                                        blackPolylineOptions.color(Color.BLACK);
+                                        blackPolylineOptions.width(5);
+                                        blackPolylineOptions.startCap(new SquareCap());
+                                        blackPolylineOptions.jointType(JointType.ROUND);
+                                        blackPolylineOptions.addAll(polylineList);
+
+                                        blackPolyline = googleMap.addPolyline(blackPolylineOptions);
+
+
+                                        LatLng origin = new LatLng(location.getLatitude(), location.getLongitude()); // driver current location
+                                        LatLng destination = new LatLng(
+                                                Double.parseDouble(customerDestinationLocation.split(",")[0]),
+                                                Double.parseDouble(customerDestinationLocation.split(",")[1])); // customer location
+
+
+                                        LatLngBounds latLngBounds = new LatLngBounds.Builder()
+                                                .include(origin)
+                                                .include(destination)
+                                                .build();
+
+
+                                        createGeoFireDestinationLocation(driverRequestReceived.getCustomerUid(),destination);
+
+                                        googleMap.moveCamera(CameraUpdateFactory.newLatLngBounds(latLngBounds, 160));
+                                        googleMap.moveCamera(CameraUpdateFactory.zoomTo(googleMap.getCameraPosition().zoom - 1));
+
+
+                                    } catch (Exception e) {
+                                        Log.d("aaaaaaaaerr", e.getMessage());
+                                        // Messages_Common_Class.showToastMsg("Error in web service direction",getActivity());
+                                    }
+
+                                }));
+
+            }
+        }).addOnFailureListener(new OnFailureListener() {
+            @Override
+            public void onFailure(@NonNull Exception e) {
+
+                Messages_Common_Class.showToastMsg(e.getMessage(), getContext());
+
+            }
+        });
+
+
+    }
+
 
     @Override
     public void onStart() {
@@ -257,11 +481,11 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
         layout_notify_customer.setVisibility(View.VISIBLE);
         progress_notify.setMax(1 * 60);
 
-        CountDownTimer countDownTimer = new CountDownTimer(1 * 60 * 100, 1000) {
+        waiting_timer = new CountDownTimer(1 * 60 * 100, 1000) {
             @Override
             public void onTick(long l) {
 
-                progress_notify.setProgress(progress_notify.getProgress()+1);
+                progress_notify.setProgress(progress_notify.getProgress() + 1);
 
                 txt_notify_customer.setText(String.format("%02d:%02d",
                         TimeUnit.MILLISECONDS.toMinutes(1) - TimeUnit.HOURS.toMinutes(TimeUnit.MILLISECONDS.toHours(1)),
@@ -272,7 +496,7 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
             @Override
             public void onFinish() {
 
-                Messages_Common_Class.showSnackBar("Time over",root_layout);
+                Messages_Common_Class.showSnackBar("Time over", root_layout);
 
             }
         }.start();
@@ -471,13 +695,30 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
 
                         if (error != null) {
                             Messages_Common_Class.showToastMsg(error.getMessage(), getActivity());
-                        } else {
-                            Messages_Common_Class.showToastMsg("You are online", getActivity());
                         }
 
                     }
                 });
     }
+
+    private void createGeoFireDestinationLocation(String customerUid, LatLng destination) {
+
+        DatabaseReference ref = FirebaseDatabase.getInstance().getReference("TripDestinationLocation");
+
+        destinationGeoFire = new GeoFire(ref);
+        destinationGeoFire.setLocation(customerUid,
+                new GeoLocation(destination.latitude, destination.longitude), new GeoFire.CompletionListener() {
+                    @Override
+                    public void onComplete(String key, DatabaseError error) {
+
+                        if (error != null) {
+                            Messages_Common_Class.showToastMsg(error.getMessage(), getActivity());
+                        }
+
+                    }
+                });
+    }
+
 
     private void createTripPlan(DriverRequestReceived driverRequestReceived, String duration, String distance) {
 
@@ -730,7 +971,19 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
 
                             if (pickupGeoFire != null) // that means geofire has been crate on firebase
                             {
-                                checkGeoQueryLocations(locationResult);
+                                pickupGeoQuery =
+                                        pickupGeoFire.queryAtLocation(new GeoLocation(locationResult.getLastLocation().getLatitude(), locationResult.getLastLocation().getLongitude()), 0.05); // min range in Km. means driver is near customer
+
+                                pickupGeoQuery.addGeoQueryEventListener(pickupGeoQueryListener);
+                            }
+
+                            //destination
+                            if (destinationGeoFire != null) // that means geofire has been crate on firebase
+                            {
+                                destinationGeoQuery =
+                                        destinationGeoFire.queryAtLocation(new GeoLocation(locationResult.getLastLocation().getLatitude(), locationResult.getLastLocation().getLongitude()), 0.05);
+
+                                destinationGeoQuery.addGeoQueryEventListener(destinationGeoQueryListener);
                             }
 
                             googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 16));
@@ -818,47 +1071,6 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
         registerOnlineSystem();
     }
 
-    private void checkGeoQueryLocations(LocationResult locationResult) {
-
-        pickupGeoQuery =
-                pickupGeoFire.queryAtLocation(new GeoLocation(locationResult.getLastLocation().getLatitude(), locationResult.getLastLocation().getLongitude()), 0.05); // min range in Km. means driver is near customer
-
-        pickupGeoQuery.addGeoQueryEventListener(new GeoQueryEventListener() {
-            @Override
-            public void onKeyEntered(String key, GeoLocation location) {
-                btn_start_vcab.setEnabled(true); // when driver arrived pickup location. so he can start trip with customer
-
-                Messages_Common_Class.sendNotifyToCustomer(getContext(), root_layout, key);
-
-                if (pickupGeoQuery != null) {
-
-                    pickupGeoFire.removeLocation(key);
-                    pickupGeoFire = null;
-                    pickupGeoQuery.removeAllListeners();
-                }
-            }
-
-            @Override
-            public void onKeyExited(String key) {
-                btn_start_vcab.setEnabled(false);
-            }
-
-            @Override
-            public void onKeyMoved(String key, GeoLocation location) {
-
-            }
-
-            @Override
-            public void onGeoQueryReady() {
-
-            }
-
-            @Override
-            public void onGeoQueryError(DatabaseError error) {
-
-            }
-        });
-    }
 
     private void saveDataInFirestore(LocationResult locationResult) {
 
