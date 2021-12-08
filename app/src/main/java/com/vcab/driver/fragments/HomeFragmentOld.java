@@ -9,6 +9,7 @@ import android.location.Address;
 import android.location.Geocoder;
 import android.location.Location;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.TextUtils;
@@ -20,6 +21,8 @@ import android.view.animation.LinearInterpolator;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -34,6 +37,8 @@ import androidx.fragment.app.FragmentTransaction;
 
 import com.firebase.geofire.GeoFire;
 import com.firebase.geofire.GeoLocation;
+import com.firebase.geofire.GeoQuery;
+import com.firebase.geofire.GeoQueryEventListener;
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
 import com.google.android.gms.location.LocationRequest;
@@ -72,6 +77,7 @@ import com.vcab.driver.Messages_Common_Class;
 import com.vcab.driver.R;
 import com.vcab.driver.model.CustomerModel;
 import com.vcab.driver.model.DriverRequestReceived;
+import com.vcab.driver.model.NotifyToCustomerEvent;
 import com.vcab.driver.model.TripPlanModel;
 import com.vcab.driver.retrofit_remote.IGoogleApiInterface;
 import com.vcab.driver.retrofit_remote.RetrofitClient;
@@ -115,8 +121,10 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
     private Chip chip_decline;
     private CardView layout_accept, start_vcab_layout;
     private CircularProgressBar circularProgressBar;
-    private TextView txt_estimate_time, txt_estimate_distance, txt_rating,
+    private TextView txt_estimate_time, txt_estimate_distance, txt_rating, txt_notify_customer,
             txt_type_vcab, txt_start_estimate_distance, txt_start_estimate_time, txt_customer_name;
+    private ProgressBar progress_notify;
+    private LinearLayout layout_notify_customer;
     private FrameLayout root_layout;
     private ImageView img_round, img_phone_call;
     private Button btn_start_vcab;
@@ -134,6 +142,9 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
     private List<LatLng> polylineList;
 
     private DriverRequestReceived driverRequestReceived;
+
+    private GeoFire pickupGeoFire;
+    private GeoQuery pickupGeoQuery;
 
 
     ValueEventListener onlineValueEventListener = new ValueEventListener() {
@@ -186,6 +197,10 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
         img_phone_call = v.findViewById(R.id.img_phone_call);
         btn_start_vcab = v.findViewById(R.id.btn_start_vcab);
 
+        layout_notify_customer = v.findViewById(R.id.layout_notify_customer);
+        txt_notify_customer = v.findViewById(R.id.txt_notify_customer);
+        progress_notify = v.findViewById(R.id.progress_notify);
+
         onlineRef = FirebaseDatabase.getInstance().getReference(".info/connected"); //it is useful for your app to know when it is online or offline. which is updated every time the Firebase Realtime Database client's connection state changes
 
         registerOnlineSystem();
@@ -235,6 +250,34 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
             EventBus.getDefault().register(this);
     }
 
+    @Subscribe(sticky = true, threadMode = ThreadMode.MAIN)
+    // after send notification to customer once driver arrived to pickup location
+    public void onNotifyToRider(NotifyToCustomerEvent notifyToCustomerEvent) {
+
+        layout_notify_customer.setVisibility(View.VISIBLE);
+        progress_notify.setMax(1 * 60);
+
+        CountDownTimer countDownTimer = new CountDownTimer(1 * 60 * 100, 1000) {
+            @Override
+            public void onTick(long l) {
+
+                progress_notify.setProgress(progress_notify.getProgress()+1);
+
+                txt_notify_customer.setText(String.format("%02d:%02d",
+                        TimeUnit.MILLISECONDS.toMinutes(1) - TimeUnit.HOURS.toMinutes(TimeUnit.MILLISECONDS.toHours(1)),
+                        TimeUnit.MILLISECONDS.toSeconds(1) - TimeUnit.MINUTES.toSeconds(TimeUnit.MICROSECONDS.toMinutes(1))));
+
+            }
+
+            @Override
+            public void onFinish() {
+
+                Messages_Common_Class.showSnackBar("Time over",root_layout);
+
+            }
+        }.start();
+
+    }
 
     @Subscribe(sticky = true, threadMode = ThreadMode.MAIN)
     public void onSelectPlaceEvent(DriverRequestReceived driverRequestReceived) {
@@ -316,9 +359,9 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
 
                                 blackPolyline = googleMap.addPolyline(blackPolylineOptions);
 
-                                // car moving animator
+                                // draw polyline animation
                                 ValueAnimator valueAnimator = ValueAnimator.ofInt(0, 100);
-                                valueAnimator.setDuration(1100);// car moving time from one location to another
+                                valueAnimator.setDuration(1100);
                                 valueAnimator.setRepeatCount(ValueAnimator.INFINITE);
                                 valueAnimator.setInterpolator(new LinearInterpolator());
                                 valueAnimator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
@@ -368,6 +411,8 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
                                         .position(destination)
                                         .title("Pickup Location"));
 
+                                createGeoFirePickupLocation(driverRequestReceived.getCustomerUid(), destination);
+
                                 googleMap.moveCamera(CameraUpdateFactory.newLatLngBounds(latLngBounds, 160));
                                 googleMap.moveCamera(CameraUpdateFactory.zoomTo(googleMap.getCameraPosition().zoom - 1));
 
@@ -396,7 +441,7 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
                                             @Override
                                             public void run() throws Exception {
 
-                                                Messages_Common_Class.showToastMsg("on complete",getActivity());
+                                                Messages_Common_Class.showToastMsg("on complete", getActivity());
                                                 createTripPlan(driverRequestReceived, duration, distance);
 
                                             }
@@ -412,6 +457,26 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
                         }));
 
 
+    }
+
+    private void createGeoFirePickupLocation(String customerUid, LatLng customerPickupLocation) {
+
+        DatabaseReference ref = FirebaseDatabase.getInstance().getReference("TripPickupLocation");
+
+        pickupGeoFire = new GeoFire(ref);
+        pickupGeoFire.setLocation(customerUid,
+                new GeoLocation(customerPickupLocation.latitude, customerPickupLocation.longitude), new GeoFire.CompletionListener() {
+                    @Override
+                    public void onComplete(String key, DatabaseError error) {
+
+                        if (error != null) {
+                            Messages_Common_Class.showToastMsg(error.getMessage(), getActivity());
+                        } else {
+                            Messages_Common_Class.showToastMsg("You are online", getActivity());
+                        }
+
+                    }
+                });
     }
 
     private void createTripPlan(DriverRequestReceived driverRequestReceived, String duration, String distance) {
@@ -433,7 +498,7 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
                                 if (task.isSuccessful()) {
                                     DocumentSnapshot document = task.getResult();
                                     if (document.exists()) {
-                                        Messages_Common_Class.showToastMsg("user data correct",getActivity());
+                                        Messages_Common_Class.showToastMsg("user data correct", getActivity());
 
                                         CustomerModel customerModel = document.toObject(CustomerModel.class);
 
@@ -460,7 +525,7 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
                                                 tripPlanModel.setDurationCustomerPickup(duration);
                                                 tripPlanModel.setCurrentLat(location.getLatitude());
                                                 tripPlanModel.setCurrentLng(location.getLongitude());
-                                                String ticketNumber=generateTicketNumber(timeOffSet);
+                                                String ticketNumber = generateTicketNumber(timeOffSet);
                                                 tripPlanModel.setTicketNumber(ticketNumber);
 
                                                 FirebaseDatabase.getInstance().getReference("Trips").child(FirebaseAuth.getInstance().getCurrentUser().getUid())
@@ -472,7 +537,7 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
                                                         txt_start_estimate_time.setText(duration);
                                                         txt_start_estimate_distance.setText(distance);
 
-                                                        setOfflineModeForDriver(driverRequestReceived, duration, distance,ticketNumber);
+                                                        setOfflineModeForDriver(driverRequestReceived, duration, distance, ticketNumber);
 
                                                     }
                                                 }).addOnFailureListener(new OnFailureListener() {
@@ -518,7 +583,7 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
     private void setOfflineModeForDriver(DriverRequestReceived driverRequestReceived, String duration, String distance, String ticketID) {
 
 
-        Messages_Common_Class.sendAcceptRequestToCustomer(mapFragment.getView(),getContext(),driverRequestReceived.getCustomerUid(),ticketID);
+        Messages_Common_Class.sendAcceptRequestToCustomer(mapFragment.getView(), getContext(), driverRequestReceived.getCustomerUid(), ticketID);
 
         // go offline for other customers..
         if (currentUserRef != null) {
@@ -539,8 +604,8 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
         Long current = System.currentTimeMillis() + timeOffSet;
         Long unique = current + random.nextLong();
 
-        if(unique<0){
-            unique*=-1; // because ticket number always must a positive number
+        if (unique < 0) {
+            unique *= -1; // because ticket number always must a positive number
         }
         return String.valueOf(unique);
 
@@ -580,7 +645,7 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
 
         if (!onlineSystemAlreadyRegister) {
             onlineRef.addValueEventListener(onlineValueEventListener);
-            onlineSystemAlreadyRegister=true;
+            onlineSystemAlreadyRegister = true;
         }
 
     }
@@ -593,6 +658,10 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
 
         if (EventBus.getDefault().hasSubscriberForEvent(DriverRequestReceived.class)) {
             EventBus.getDefault().removeStickyEvent(DriverRequestReceived.class);
+
+        }
+        if (EventBus.getDefault().hasSubscriberForEvent(NotifyToCustomerEvent.class)) {
+            EventBus.getDefault().removeStickyEvent(NotifyToCustomerEvent.class);
 
         }
         EventBus.getDefault().unregister(this);
@@ -657,7 +726,15 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
                         if (googleMap != null) {
                             //   markOnMap(locationResult.getLastLocation(),16,);
                             LatLng latLng = new LatLng(locationResult.getLastLocation().getLatitude(), locationResult.getLastLocation().getLongitude());
+
+
+                            if (pickupGeoFire != null) // that means geofire has been crate on firebase
+                            {
+                                checkGeoQueryLocations(locationResult);
+                            }
+
                             googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 16));
+
 
                             if (!isTripStart) {
                                 Geocoder geocoder = new Geocoder(getContext(), Locale.getDefault());
@@ -739,6 +816,48 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
         fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallBack, Looper.myLooper());
 
         registerOnlineSystem();
+    }
+
+    private void checkGeoQueryLocations(LocationResult locationResult) {
+
+        pickupGeoQuery =
+                pickupGeoFire.queryAtLocation(new GeoLocation(locationResult.getLastLocation().getLatitude(), locationResult.getLastLocation().getLongitude()), 0.05); // min range in Km. means driver is near customer
+
+        pickupGeoQuery.addGeoQueryEventListener(new GeoQueryEventListener() {
+            @Override
+            public void onKeyEntered(String key, GeoLocation location) {
+                btn_start_vcab.setEnabled(true); // when driver arrived pickup location. so he can start trip with customer
+
+                Messages_Common_Class.sendNotifyToCustomer(getContext(), root_layout, key);
+
+                if (pickupGeoQuery != null) {
+
+                    pickupGeoFire.removeLocation(key);
+                    pickupGeoFire = null;
+                    pickupGeoQuery.removeAllListeners();
+                }
+            }
+
+            @Override
+            public void onKeyExited(String key) {
+                btn_start_vcab.setEnabled(false);
+            }
+
+            @Override
+            public void onKeyMoved(String key, GeoLocation location) {
+
+            }
+
+            @Override
+            public void onGeoQueryReady() {
+
+            }
+
+            @Override
+            public void onGeoQueryError(DatabaseError error) {
+
+            }
+        });
     }
 
     private void saveDataInFirestore(LocationResult locationResult) {

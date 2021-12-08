@@ -21,6 +21,9 @@ import com.vcab.driver.firebase_notification.FCMSendData;
 import com.vcab.driver.firebase_notification.IFCMService;
 import com.vcab.driver.firebase_notification.RetrofitFCMClient;
 import com.vcab.driver.model.DriverInfoModel;
+import com.vcab.driver.model.NotifyToCustomerEvent;
+
+import org.greenrobot.eventbus.EventBus;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -200,5 +203,71 @@ public class Messages_Common_Class {
                 }
             }
         });
+    }
+
+    public static void sendNotifyToCustomer(Context context, View view, String customerUid) {
+
+
+        CompositeDisposable compositeDisposable = new CompositeDisposable();
+        IFCMService ifcmService = RetrofitFCMClient.getInstance().create(IFCMService.class);
+
+        //get Customer Token to send notification
+        DocumentReference nycRef = FirebaseFirestore.getInstance().document("users/customers/userData/" + customerUid);
+
+        nycRef.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+            @Override
+            public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                if (task.isSuccessful()) {
+                    DocumentSnapshot document = task.getResult();
+                    if (document.exists()) {
+
+                        String driverToken = document.get("firebaseToken").toString();
+
+                        Map<String, String> notificationData = new HashMap<>();
+                        notificationData.put("title", "Driver arrived");
+                        notificationData.put("body", "Your driver has arrived!");
+                        notificationData.put("driverUid", FirebaseAuth.getInstance().getCurrentUser().getUid());
+                        notificationData.put("customerUid", customerUid);
+
+                        FCMSendData fcmSendData = new FCMSendData(driverToken, notificationData);
+
+                        compositeDisposable.add(ifcmService.sendNotification(fcmSendData)
+                                .subscribeOn(Schedulers.newThread())
+                                .observeOn(AndroidSchedulers.mainThread())
+                                .subscribe(new Consumer<FCMResponse>() {
+                                    @Override
+                                    public void accept(FCMResponse fcmResponse) throws Exception {
+
+                                        if (fcmResponse.getSuccess()== 0) {
+
+                                            compositeDisposable.clear();
+                                            showSnackBar("Failed to send request to customer",view);
+
+                                        }else {
+                                            EventBus.getDefault().postSticky(new NotifyToCustomerEvent());
+                                            showSnackBar("Request Accept Success!",view);
+
+                                        }
+
+                                    }
+                                }, new Consumer<Throwable>() {
+                                    @Override
+                                    public void accept(Throwable throwable) throws Exception {
+                                        compositeDisposable.clear();
+                                        showSnackBar(throwable.getMessage(),view);
+                                    }
+                                }));
+
+
+                    } else {
+                    }
+                } else {
+                    compositeDisposable.clear();
+                    Messages_Common_Class.showSnackBar("Try again. No customer token found", view);
+                }
+            }
+        });
+
+
     }
 }
