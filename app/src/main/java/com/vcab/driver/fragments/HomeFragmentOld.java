@@ -117,6 +117,7 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
 
     DatabaseReference onlineRef, currentUserRef, driversLocationRef;
     GeoFire geoFire;
+    private String tempTicketNumber;
 
     private Chip chip_decline;
     private CardView layout_accept, start_vcab_layout;
@@ -301,14 +302,26 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
 
                 if (driverRequestReceived != null) {
 
-                    if (countDownEvent != null) {
-                        countDownEvent.dispose();  // to remove using disposables.
+                    if (TextUtils.isEmpty(tempTicketNumber)) {
+
+                        if (countDownEvent != null) {
+                            countDownEvent.dispose();  // to remove using disposables.
+                        }
                         chip_decline.setVisibility(View.GONE);
                         layout_accept.setVisibility(View.GONE);
                         googleMap.clear();
+                        circularProgressBar.setProgress(0);
                         Messages_Common_Class.sendDeclineRequest(root_layout, getContext(), driverRequestReceived.getCustomerUid());
-                        driverRequestReceived = null;
+
+                    } else {
+                        chip_decline.setVisibility(View.GONE);
+                        start_vcab_layout.setVisibility(View.GONE);
+                        googleMap.clear();
+                        Messages_Common_Class.sendDeclineAndRemoveTripRequest(root_layout, getContext(), driverRequestReceived.getCustomerUid());
+                        tempTicketNumber="";
                     }
+
+                    driverRequestReceived = null;
                 }
 
             }
@@ -340,9 +353,9 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
                     );
 
                     googleMap.addMarker(new MarkerOptions()
-                    .position(destinationLatLng)
-                    .title(driverRequestReceived.getCustomerDestinationAddress())
-                    .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_YELLOW)));
+                            .position(destinationLatLng)
+                            .title(driverRequestReceived.getCustomerDestinationAddress())
+                            .icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_YELLOW)));
 
                     //draw path to customer trip end destination
 
@@ -360,7 +373,7 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
         btn_complete_trip.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Messages_Common_Class.showSnackBar("Trip Completed!",root_layout);
+                Messages_Common_Class.showSnackBar("Trip Completed!", root_layout);
             }
         });
 
@@ -440,7 +453,7 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
                                                 .build();
 
 
-                                        createGeoFireDestinationLocation(driverRequestReceived.getCustomerUid(),destination);
+                                        createGeoFireDestinationLocation(driverRequestReceived.getCustomerUid(), destination);
 
                                         googleMap.moveCamera(CameraUpdateFactory.newLatLngBounds(latLngBounds, 160));
                                         googleMap.moveCamera(CameraUpdateFactory.zoomTo(googleMap.getCameraPosition().zoom - 1));
@@ -848,7 +861,9 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
         if (unique < 0) {
             unique *= -1; // because ticket number always must a positive number
         }
-        return String.valueOf(unique);
+
+        tempTicketNumber = String.valueOf(unique);
+        return tempTicketNumber;
 
     }
 

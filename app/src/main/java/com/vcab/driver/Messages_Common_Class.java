@@ -10,9 +10,12 @@ import androidx.annotation.NonNull;
 
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.android.material.snackbar.Snackbar;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.firestore.DocumentReference;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -100,7 +103,7 @@ public class Messages_Common_Class {
                         String driverToken = document.get("firebaseToken").toString();
 
                         Map<String, String> notificationData = new HashMap<>();
-                        notificationData.put("title", "Decline");
+                            notificationData.put("title", "Decline");
                         notificationData.put("body", "This message represent for action driver DECLINE");
                         notificationData.put("driverUid", FirebaseAuth.getInstance().getCurrentUser().getUid());
 
@@ -265,6 +268,82 @@ public class Messages_Common_Class {
                     compositeDisposable.clear();
                     Messages_Common_Class.showSnackBar("Try again. No customer token found", view);
                 }
+            }
+        });
+
+
+    }
+
+    public static void sendDeclineAndRemoveTripRequest(View view, Context context, String customerUid) {
+
+        CompositeDisposable compositeDisposable = new CompositeDisposable();
+        IFCMService ifcmService = RetrofitFCMClient.getInstance().create(IFCMService.class);
+
+
+        FirebaseDatabase.getInstance().getReference("Trips")
+                .child(FirebaseAuth.getInstance().getCurrentUser().getUid()).removeValue().addOnFailureListener(new OnFailureListener() {
+            @Override
+            public void onFailure(@NonNull Exception e) {
+                showSnackBar(e.getMessage(),view);
+            }
+        }).addOnSuccessListener(new OnSuccessListener<Void>() {
+            @Override
+            public void onSuccess(Void unused) {
+                //get Customer Token to send notification
+                DocumentReference nycRef = FirebaseFirestore.getInstance().document("users/customers/userData/" + customerUid);
+
+                nycRef.get().addOnCompleteListener(new OnCompleteListener<DocumentSnapshot>() {
+                    @Override
+                    public void onComplete(@NonNull Task<DocumentSnapshot> task) {
+                        if (task.isSuccessful()) {
+                            DocumentSnapshot document = task.getResult();
+                            if (document.exists()) {
+
+                                String driverToken = document.get("firebaseToken").toString();
+
+                                Map<String, String> notificationData = new HashMap<>();
+                                notificationData.put("title", "DeclineAndRemoveTrip");
+                                notificationData.put("body", "Drive has decline your trip request");
+                                notificationData.put("driverUid", FirebaseAuth.getInstance().getCurrentUser().getUid());
+
+                                FCMSendData fcmSendData = new FCMSendData(driverToken, notificationData);
+
+                                compositeDisposable.add(ifcmService.sendNotification(fcmSendData)
+                                        .subscribeOn(Schedulers.newThread())
+                                        .observeOn(AndroidSchedulers.mainThread())
+                                        .subscribe(new Consumer<FCMResponse>() {
+                                            @Override
+                                            public void accept(FCMResponse fcmResponse) throws Exception {
+
+                                                if (fcmResponse.getSuccess()== 0) {
+
+                                                    compositeDisposable.clear();
+                                                    showSnackBar("Failed to send request to customer",view);
+
+                                                }else {
+                                                    EventBus.getDefault().postSticky(new NotifyToCustomerEvent());
+                                                    showSnackBar("Request Accept Success!",view);
+
+                                                }
+
+                                            }
+                                        }, new Consumer<Throwable>() {
+                                            @Override
+                                            public void accept(Throwable throwable) throws Exception {
+                                                compositeDisposable.clear();
+                                                showSnackBar(throwable.getMessage(),view);
+                                            }
+                                        }));
+
+
+                            } else {
+                            }
+                        } else {
+                            compositeDisposable.clear();
+                            Messages_Common_Class.showSnackBar("Try again. No customer token found", view);
+                        }
+                    }
+                });
             }
         });
 
