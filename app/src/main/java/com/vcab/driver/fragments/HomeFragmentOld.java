@@ -312,16 +312,39 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
                         googleMap.clear();
                         circularProgressBar.setProgress(0);
                         Messages_Common_Class.sendDeclineRequest(root_layout, getContext(), driverRequestReceived.getCustomerUid());
-
+                        driverRequestReceived = null;
                     } else {
-                        chip_decline.setVisibility(View.GONE);
-                        start_vcab_layout.setVisibility(View.GONE);
-                        googleMap.clear();
-                        Messages_Common_Class.sendDeclineAndRemoveTripRequest(root_layout, getContext(), driverRequestReceived.getCustomerUid());
-                        tempTicketNumber="";
+
+
+                        if (fusedLocationProviderClient == null) {
+                            fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(getActivity());
+                        }
+                        if (ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                            return;
+                        }
+                        fusedLocationProviderClient.getLastLocation().addOnSuccessListener(new OnSuccessListener<Location>() {
+                            @Override
+                            public void onSuccess(Location location) {
+                                chip_decline.setVisibility(View.GONE);
+                                start_vcab_layout.setVisibility(View.GONE);
+                                googleMap.clear();
+                                Messages_Common_Class.sendDeclineAndRemoveTripRequest(root_layout, getContext(), driverRequestReceived.getCustomerUid());
+                                tempTicketNumber = "";
+                                circularProgressBar.setProgress(0);
+                                driverRequestReceived = null;
+                                makeDriverOnline(location);
+                            }
+                        }).addOnFailureListener(new OnFailureListener() {
+                            @Override
+                            public void onFailure(@NonNull Exception e) {
+
+                                Messages_Common_Class.showSnackBar(e.getMessage(),root_layout);
+
+                            }
+                        });
                     }
 
-                    driverRequestReceived = null;
+
                 }
 
             }
@@ -1001,49 +1024,12 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
                                 destinationGeoQuery.addGeoQueryEventListener(destinationGeoQueryListener);
                             }
 
-                            googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 16));
+                            googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng, 18f));
 
 
                             if (!isTripStart) {
-                                Geocoder geocoder = new Geocoder(getContext(), Locale.getDefault());
-                                List<Address> addressList;
-                                try {
 
-                                    addressList = geocoder.getFromLocation(locationResult.getLastLocation().getLatitude(), locationResult.getLastLocation().getLongitude(), 1);
-                                    String cityName = addressList.get(0).getLocality();
-
-                                    //  addressList.get(0).getLocality() city name
-                                    //addressList.get(0).getSubLocality()
-                                    // addressList.get(0).getAddressLine(0) address eg Kidelpitiya - Gorokgoda - Kahawala Rd, Sri Lanka
-                                    //addressList.get(0).getAdminArea() Western Province
-                                    //addressList.get(0).getSubAdminArea()  Kalutara
-
-                                    if (cityName == null) {
-                                        cityName = addressList.get(0).getAddressLine(0);
-                                    }
-                                    //Query
-                                    driversLocationRef = FirebaseDatabase.getInstance().getReference("DriversLocation").child(cityName); //DriversLocation path
-                                    currentUserRef = driversLocationRef.child(FirebaseAuth.getInstance().getCurrentUser().getUid());//path inside DriversLocation
-
-                                    geoFire = new GeoFire(driversLocationRef);
-
-                                    geoFire.setLocation(FirebaseAuth.getInstance().getCurrentUser().getUid(), // add current driver location to firebase database. path same as currentUserRef. otherwise data not delete when app close
-                                            new GeoLocation(locationResult.getLastLocation().getLatitude(), locationResult.getLastLocation().getLongitude()), new GeoFire.CompletionListener() {
-                                                @Override
-                                                public void onComplete(String key, DatabaseError error) {
-
-                                                    if (error != null) {
-                                                        Messages_Common_Class.showToastMsg(error.getMessage(), getActivity());
-                                                    } else {
-                                                        Messages_Common_Class.showToastMsg("You are online", getActivity());
-                                                    }
-
-                                                }
-                                            });
-
-                                } catch (Exception e) {
-                                    Messages_Common_Class.showToastMsg(e.getMessage(), getActivity());
-                                }
+                                makeDriverOnline(locationResult.getLastLocation());
 
                                 //  saveDataInFirestore(locationResult);
                             } else {
@@ -1084,6 +1070,49 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
         fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallBack, Looper.myLooper());
 
         registerOnlineSystem();
+    }
+
+    private void makeDriverOnline(Location lastLocation) {
+
+        Geocoder geocoder = new Geocoder(getContext(), Locale.getDefault());
+        List<Address> addressList;
+        try {
+
+            addressList = geocoder.getFromLocation(lastLocation.getLatitude(), lastLocation.getLongitude(), 1);
+            String cityName = addressList.get(0).getLocality();
+
+            //  addressList.get(0).getLocality() city name
+            //addressList.get(0).getSubLocality()
+            // addressList.get(0).getAddressLine(0) address eg Kidelpitiya - Gorokgoda - Kahawala Rd, Sri Lanka
+            //addressList.get(0).getAdminArea() Western Province
+            //addressList.get(0).getSubAdminArea()  Kalutara
+
+            if (cityName == null) {
+                cityName = addressList.get(0).getAddressLine(0);
+            }
+            //Query
+            driversLocationRef = FirebaseDatabase.getInstance().getReference("DriversLocation").child(cityName); //DriversLocation path
+            currentUserRef = driversLocationRef.child(FirebaseAuth.getInstance().getCurrentUser().getUid());//path inside DriversLocation
+
+            geoFire = new GeoFire(driversLocationRef);
+
+            geoFire.setLocation(FirebaseAuth.getInstance().getCurrentUser().getUid(), // add current driver location to firebase database. path same as currentUserRef. otherwise data not delete when app close
+                    new GeoLocation(lastLocation.getLatitude(), lastLocation.getLongitude()), new GeoFire.CompletionListener() {
+                        @Override
+                        public void onComplete(String key, DatabaseError error) {
+
+                            if (error != null) {
+                                Messages_Common_Class.showToastMsg(error.getMessage(), getActivity());
+                            } else {
+                                Messages_Common_Class.showToastMsg("You are online", getActivity());
+                            }
+
+                        }
+                    });
+
+        } catch (Exception e) {
+            Messages_Common_Class.showToastMsg(e.getMessage(), getActivity());
+        }
     }
 
 

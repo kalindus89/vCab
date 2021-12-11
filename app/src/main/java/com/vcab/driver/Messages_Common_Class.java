@@ -247,7 +247,7 @@ public class Messages_Common_Class {
                                             showSnackBar("Failed to send request to customer",view);
 
                                         }else {
-                                            EventBus.getDefault().postSticky(new NotifyToCustomerEvent());
+                                                EventBus.getDefault().postSticky(new NotifyToCustomerEvent());
                                             showSnackBar("Request Accept Success!",view);
 
                                         }
@@ -321,8 +321,7 @@ public class Messages_Common_Class {
                                                     showSnackBar("Failed to send request to customer",view);
 
                                                 }else {
-                                                    EventBus.getDefault().postSticky(new NotifyToCustomerEvent());
-                                                    showSnackBar("Request Accept Success!",view);
+                                                    showSnackBar("Decline Success!",view);
 
                                                 }
 
