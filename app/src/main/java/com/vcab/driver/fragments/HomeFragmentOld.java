@@ -338,7 +338,7 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
                             @Override
                             public void onFailure(@NonNull Exception e) {
 
-                                Messages_Common_Class.showSnackBar(e.getMessage(),root_layout);
+                                Messages_Common_Class.showSnackBar(e.getMessage(), root_layout);
 
                             }
                         });
@@ -396,7 +396,78 @@ public class HomeFragmentOld extends Fragment implements OnMapReadyCallback {
         btn_complete_trip.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Messages_Common_Class.showSnackBar("Trip Completed!", root_layout);
+
+                //First update Trip set done to true
+
+                Map<String, Object> update_trip = new HashMap<>();
+                update_trip.put("done", true);
+
+                FirebaseDatabase.getInstance().getReference("Trips")
+                        .child(FirebaseAuth.getInstance().getCurrentUser().getUid()).updateChildren(update_trip)
+                        .addOnFailureListener(new OnFailureListener() {
+                            @Override
+                            public void onFailure(@NonNull Exception e) {
+                                Messages_Common_Class.showSnackBar(e.getMessage(), root_layout);
+                            }
+                        }).addOnSuccessListener(new OnSuccessListener<Void>() {
+                    @Override
+                    public void onSuccess(Void unused) {
+
+                        if (ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.ACCESS_FINE_LOCATION)
+                                != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getActivity(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                            return;
+                        }
+                        if (fusedLocationProviderClient == null) {
+                            fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(getActivity());
+                        }
+                        fusedLocationProviderClient.getLastLocation().addOnSuccessListener(new OnSuccessListener<Location>() {
+                            @Override
+                            public void onSuccess(Location location) {
+
+                                Messages_Common_Class.sendCompleteTripToCustomer(getView(),driverRequestReceived.getCustomerUid(),FirebaseAuth.getInstance().getCurrentUser().getUid());
+
+                                googleMap.clear();
+
+                                tempTicketNumber="";
+
+                                chip_decline.setVisibility(View.GONE);
+                                layout_accept.setVisibility(View.GONE);
+                                start_vcab_layout.setVisibility(View.GONE);
+                                layout_notify_customer.setVisibility(View.GONE);
+                                btn_complete_trip.setVisibility(View.GONE);
+                                btn_start_vcab.setVisibility(View.VISIBLE);
+
+                                circularProgressBar.setProgress(0);
+                                progress_notify.setProgress(0);
+
+                                isTripStart=false;
+                                btn_complete_trip.setEnabled(false);
+                                btn_start_vcab.setEnabled(false);
+
+                                destinationGeoFire=null;
+                                pickupGeoFire=null;
+
+                                driverRequestReceived=null;
+
+                                makeDriverOnline(location);
+
+
+
+
+
+                            }
+                        }).addOnFailureListener(new OnFailureListener() {
+                            @Override
+                            public void onFailure(@NonNull Exception e) {
+
+                                Messages_Common_Class.showToastMsg(e.getMessage(), getContext());
+
+                            }
+                        });
+
+                    }
+                });
+
             }
         });
 
