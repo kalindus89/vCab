@@ -233,6 +233,8 @@ public class Messages_Common_Class {
                         notificationData.put("driverUid", FirebaseAuth.getInstance().getCurrentUser().getUid());
                         notificationData.put("customerUid", customerUid);
 
+                        showSnackBar(driverToken,view);
+
                         FCMSendData fcmSendData = new FCMSendData(driverToken, notificationData);
 
                         compositeDisposable.add(ifcmService.sendNotification(fcmSendData)
